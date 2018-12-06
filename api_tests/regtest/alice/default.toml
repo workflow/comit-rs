@@ -16,8 +16,8 @@ extended_private_key="tprv8ZgxMBicQKsPcsbCVeqqF1KVdH7gwDJbxbzpCxDUsoXHdb6SnTPYxd
 [lightning_bitcoin]
 network = "bitcoin"
 node_uri = "35.244.69.128:10009"
-tls_cert_path = "/Users/llfourn/.alice-lnd/tls.cert"
-readonly_macaroon_path = "/Users/llfourn/.alice-lnd/data/chain/bitcoin/mainnet/admin.macaroon"
+tls_cert_path = "mainnet_stuff/alice/tls.cert"
+readonly_macaroon_path = "mainnet_stuff/alice/admin.macaroon"
 grpc_origin_uri = "http://bitcoin-mainnet:10009"
 
 [comit]
