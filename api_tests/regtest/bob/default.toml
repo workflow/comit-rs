@@ -18,8 +18,8 @@ queries_poll_interval_secs = 1
 [lightning_bitcoin]
 network = "bitcoin"
 node_uri = "35.244.69.128:10019"
-tls_cert_path = "api_tests/mainnet_stuff/bob/tls.cert"
-readonly_macaroon_path = "api_tests/mainnet_stuff/bob/admin.macaroon"
+tls_cert_path = "mainnet_stuff/bob/tls.cert"
+readonly_macaroon_path = "mainnet_stuff/bob/admin.macaroon"
 grpc_origin_uri = "http://bitcoin-mainnet:10019"
 
 [comit]
