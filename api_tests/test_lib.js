@@ -36,15 +36,16 @@ const packageDefinition = protoLoader.loadSync(process.env.PROJECT_ROOT + '/api_
 const lnrpc = grpc.loadPackageDefinition(packageDefinition).lnrpc;
 process.env.GRPC_SSL_CIPHER_SUITES = 'HIGH+ECDSA';
 
-function create_lnrpc_client (name, uri) {
-    const lnd_cert = fs.readFileSync(process.env.LND_CERTS_DIR + '/' + name + '-tls.cert');
+function create_lnrpc_client (name, uri, lnd_cert_file, macaroon_file) {
+    const lnd_cert = fs.readFileSync(lnd_cert_file);
     const ssl_credentials = grpc.credentials.createSsl(lnd_cert);
     const macaroon = grpc.credentials.createFromMetadataGenerator(function (args, callback) {
-        const macaroon = fs.readFileSync(process.env.LND_CERTS_DIR + name + '-admin.macaroon').toString('hex');
+        const macaroon = fs.readFileSync(macaroon_file).toString('hex');
         let metadata = new grpc.Metadata();
         metadata.add('macaroon', macaroon);
         callback(null, metadata);
     });
+    console.log(name + " "  + uri);
     const credentials = grpc.credentials.combineChannelCredentials(ssl_credentials,macaroon);
     return new lnrpc.Lightning(uri, credentials);
 };
@@ -270,7 +271,7 @@ class ComitConf {
         );
         this.wallet = new WalletConf(name);
         if (should_configure_lnd) {
-            this.ln = new LightningNetwork(name, this.config.lightning_bitcoin.node_uri);
+            this.ln = new LightningNetwork(name, this.config.lightning_bitcoin.node_uri.replace("35.244.69.128", "bitcoin-mainnet"), this.config.lightning_bitcoin.tls_cert_path, this.config.lightning_bitcoin.readonly_macaroon_path);
         }
     }
 
@@ -317,8 +318,9 @@ function resolveReject(resolve, reject) {
 }
 
 class LightningNetwork {
-    constructor(name, uri) {
-        this.rpc_client = create_lnrpc_client(name, uri);
+    constructor(name, uri, lnd_cert_file, macaroon_file) {
+        console.log(lnd_cert_file, macaroon_file);
+        this.rpc_client = create_lnrpc_client(name, uri, lnd_cert_file, macaroon_file);
         switch (name) {
             case "alice":
                 this.host = process.env.lnd_alice_ip;

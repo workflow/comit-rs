@@ -61,7 +61,7 @@ impl ClientFactory {
                 // The certificate contains "localhost" and the hostname of the machine lnd
                 // is running on at "DNS Name". Hence "localhost" (or the machine hostname for
                 // added security) must be passed here
-                tokio_tls_api::connect_async(&connector, "localhost", tcp_stream)
+                tokio_tls_api::connect_async(&connector, "bitcoin-mainnet", tcp_stream)
                     .map_err(Error::Tls)
             })
             .and_then(move |socket| {

@@ -18,7 +18,7 @@ const alice = test_lib.comit_conf("alice", true);
 const bob = test_lib.comit_conf("bob", true);
 
 const alpha_asset_amount = new ethutil.BN(web3.utils.toWei("5000", 'ether'), 10);
-const beta_asset = 4000000;
+const beta_asset = 420;
 
 describe("RFC003: ERC20 for Lightning Bitcoin", () => {
 
@@ -32,11 +32,7 @@ describe("RFC003: ERC20 for Lightning Bitcoin", () => {
         bob_ln_info = await bob.ln.getInfo();
         const alice_ln_pubkey = alice_ln_info.identity_pubkey;
         const bob_ln_pubkey = bob_ln_info.identity_pubkey;
-        await alice.ln.connectToPeer(bob_ln_pubkey, bob.ln.host);
-        await bob.wallet.fund_btc(10);
-        await bob.ln.send_btc_to_wallet(1);
-        await test_lib.btc_generate(1);
-        await bob.ln.openChannel(15000000, alice_ln_pubkey);
+
         let bob_channel_balance = await bob.ln.channelBalance();
         if (parseInt(bob_channel_balance.balance) === 0) {
             throw new Error("Bob should have some balance in a channel with Alice.");
@@ -67,8 +63,9 @@ describe("RFC003: ERC20 for Lightning Bitcoin", () => {
             });
     });
 
-    it("[Alice] Should be able to make a swap request via HTTP api", async () => {
-        return chai.request(alice.comit_node_url())
+    it("[Alice] Should be able to make a swap request via HTTP api", async function() {
+        this.timeout(3000);
+        await chai.request(alice.comit_node_url())
             .post('/swaps/rfc003')
             .send({
                 "alpha_ledger": {
@@ -96,13 +93,14 @@ describe("RFC003: ERC20 for Lightning Bitcoin", () => {
                 swap_location.should.be.a("string");
                 alice_swap_href = swap_location;
             });
+        // Bob has to wait for Lnd connection so he needs some wiggle room
+        await test_lib.sleep(2000);
         });
 
     let bob_swap_href;
 
     it("[Bob] Shows the Swap as Start in /swaps", async () => {
-        // Bob has to wait for Lnd connection so he needs some wiggle room
-        await test_lib.sleep(1000);
+
         let res = await chai.request(bob.comit_node_url()).get("/swaps");
         let embedded = res.body._embedded;
         let swap_embedded = embedded.swaps[0];
@@ -160,6 +158,8 @@ describe("RFC003: ERC20 for Lightning Bitcoin", () => {
         links.should.have.property("add_invoice");
         alice_add_invoice_href = links.add_invoice.href;
     });
+
+    // let alice_funding_action;
 
     let alice_add_invoice_action;
     it("[Alice] Can get the invoice from the ‘add_invoice’ link", async () => {
@@ -254,7 +254,7 @@ describe("RFC003: ERC20 for Lightning Bitcoin", () => {
         receipt.status.should.equal(true);
     });
 
-    
+
     it("[Alice] Should be in AlphaFunded state after executing the fund action", async function() {
         this.timeout(10000);
         let swap = await alice.poll_comit_node_until(
@@ -278,7 +278,7 @@ describe("RFC003: ERC20 for Lightning Bitcoin", () => {
     });
 
     let bob_fund_action;
-    
+
     it("[Bob] Can get the funding action from the ‘fund’ link", async () => {
         let res = await chai
             .request(bob.comit_node_url())
@@ -315,7 +315,7 @@ describe("RFC003: ERC20 for Lightning Bitcoin", () => {
     it("[Alice] Should have received the beta asset after the redeem", async function() {
         let alice_channel_balance_after = await alice.ln.channelBalance();
         alice_channel_balance_after = parseInt(alice_channel_balance_after.balance);
-        
+
         let alice_channel_balance_expected = alice_channel_balance_before + beta_asset;
         alice_channel_balance_after.should.be.equal(alice_channel_balance_expected);
     });

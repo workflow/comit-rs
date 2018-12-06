@@ -16,11 +16,11 @@ extended_private_key="tprv8ZgxMBicQKsPcsbCVeqqF1KVdH7gwDJbxbzpCxDUsoXHdb6SnTPYxd
 queries_poll_interval_secs = 1
 
 [lightning_bitcoin]
-network = "regtest"
-node_uri = "127.0.0.1:10019"
-tls_cert_path = "$PROJECT_ROOT/api_tests/regtest/lnd_certs/bob-tls.cert"
-readonly_macaroon_path = "$PROJECT_ROOT/api_tests/regtest/lnd_certs/bob-readonly.macaroon"
-grpc_origin_uri = "http://127.0.0.1"
+network = "bitcoin"
+node_uri = "35.244.69.128:10019"
+tls_cert_path = "/Users/llfourn/.bob-lnd/tls.cert"
+readonly_macaroon_path = "/Users/llfourn/.bob-lnd/data/chain/bitcoin/mainnet/admin.macaroon"
+grpc_origin_uri = "http://bitcoin-mainnet:10019"
 
 [comit]
 remote_comit_node_url = "127.0.0.1:8001"
@@ -37,4 +37,3 @@ url = "http://localhost:8080"
 poll_interval_secs = 1
 [ledger_query_service.ethereum]
 poll_interval_secs = 1
-

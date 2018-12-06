@@ -11,7 +11,7 @@ use std::{
 };
 use swap_protocols::{
     asset::Asset,
-    metadata_store::MetadataStore,
+    metadata_store::{Metadata, MetadataStore},
     rfc003::{
         self,
         bob::SwapRequestKind,
@@ -63,15 +63,9 @@ impl<M: MetadataStore<SwapId>, S: StateStore<SwapId>> SwapRequestHandler<M, S> {
                     rfc003::bob::SwapRequestKind::BitcoinEthereumBitcoinQuantityEtherQuantity(
                         request,
                     ) => {
-                        if let Err(e) = metadata_store.insert(id, request.clone()) {
-                            error!("Failed to store metadata for swap {} because {:?}", id, e);
-
-                            // Return Ok to keep the loop running
-                            return Ok(());
-                        }
-
                         {
                             let request = request.clone();
+                            let metadata: Metadata = request.clone().into();
                             let (bob, response_future) = Bob::new();
 
                             let response_future = response_future.inspect(|response| {
@@ -96,6 +90,8 @@ impl<M: MetadataStore<SwapId>, S: StateStore<SwapId>> SwapRequestHandler<M, S> {
                                 id,
                                 start_state,
                                 state_store.as_ref(),
+                                metadata_store.as_ref(),
+                                metadata,
                                 Box::new(LqsEvents::new(
                                     QueryIdCache::wrap(Arc::clone(&lqs_api_client)),
                                     FirstMatch::new(
@@ -119,15 +115,9 @@ impl<M: MetadataStore<SwapId>, S: StateStore<SwapId>> SwapRequestHandler<M, S> {
                     rfc003::bob::SwapRequestKind::BitcoinEthereumBitcoinQuantityErc20Quantity(
                         request,
                     ) => {
-                        if let Err(e) = metadata_store.insert(id, request.clone()) {
-                            error!("Failed to store metadata for swap {} because {:?}", id, e);
-
-                            // Return Ok to keep the loop running
-                            return Ok(());
-                        }
-
                         {
                             let request = request.clone();
+                            let metadata: Metadata = request.clone().into();
                             let (bob, response_future) = Bob::new();
 
                             let response_future = response_future.inspect(|response| {
@@ -152,6 +142,8 @@ impl<M: MetadataStore<SwapId>, S: StateStore<SwapId>> SwapRequestHandler<M, S> {
                                 id,
                                 start_state,
                                 state_store.as_ref(),
+                                metadata_store.as_ref(),
+                                metadata,
                                 Box::new(LqsEvents::new(
                                     QueryIdCache::wrap(Arc::clone(&lqs_api_client)),
                                     FirstMatch::new(
@@ -175,68 +167,63 @@ impl<M: MetadataStore<SwapId>, S: StateStore<SwapId>> SwapRequestHandler<M, S> {
                     rfc003::bob::SwapRequestKind::EthereumLightningBitcoinQuantityErc20Quantity(
                         request,
                     ) => {
-                        if let Err(e) = metadata_store.insert(id, request.clone()) {
-                            error!("Failed to store metadata for swap {} because {:?}", id, e);
+                        let request = request.clone();
+                        let metadata: Metadata = request.clone().into();
+                        let (bob, response_future) = Bob::new();
 
-                            // Return Ok to keep the loop running
-                            return Ok(());
-                        }
+                        let response_future = response_future.inspect(|response| {
+                            response_sender
+                                .send(response.clone().into())
+                                .expect("receiver should never go out of scope");
+                        });
 
-                        {
-                            let request = request.clone();
-                            let (bob, response_future) = Bob::new();
+                        let start_state = Start {
+                            alpha_ledger_refund_identity: request.alpha_ledger_refund_identity,
+                            beta_ledger_success_identity: request.beta_ledger_success_identity,
+                            alpha_ledger: request.alpha_ledger,
+                            beta_ledger: request.beta_ledger,
+                            alpha_asset: request.alpha_asset,
+                            beta_asset: request.beta_asset,
+                            alpha_ledger_lock_duration: request.alpha_ledger_lock_duration,
+                            secret: request.secret_hash,
+                            role: bob,
+                        };
 
-                            let response_future = response_future.inspect(|response| {
-                                response_sender
-                                    .send(response.clone().into())
-                                    .expect("receiver should never go out of scope");
-                            });
-
-                            let start_state = Start {
-                                alpha_ledger_refund_identity: request.alpha_ledger_refund_identity,
-                                beta_ledger_success_identity: request.beta_ledger_success_identity,
-                                alpha_ledger: request.alpha_ledger,
-                                beta_ledger: request.beta_ledger,
-                                alpha_asset: request.alpha_asset,
-                                beta_asset: request.beta_asset,
-                                alpha_ledger_lock_duration: request.alpha_ledger_lock_duration,
-                                secret: request.secret_hash,
-                                role: bob,
-                            };
-
-                            let state_store = Arc::clone(&state_store);
-                            let lqs_api_client = Arc::clone(&lqs_api_client);
-                            info!("Attempting to get lnd client for {}", id);
-                            tokio::spawn(
-                                lightning_client_factory
-                                    .new_client()
-                                    .and_then(move |lnd_client| {
-                                        info!("Got lnd client for {}", id);
-                                        spawn_state_machine(
-                                            id,
-                                            start_state,
-                                            state_store.as_ref(),
-                                            Box::new(LqsEventsForErc20::new(
-                                                QueryIdCache::wrap(Arc::clone(&lqs_api_client)),
-                                                FirstMatch::new(
-                                                    Arc::clone(&lqs_api_client),
-                                                    ethereum_poll_interval,
-                                                ),
-                                            )),
-                                            Box::new(BobLightningEvents::new(Arc::new(
-                                                Mutex::new(lnd_client),
-                                            ))),
-                                            Box::new(BobToAlice::new(Box::new(response_future))),
-                                        );
-                                        Ok(())
-                                    })
-                                    .map_err(|e| {
-                                        error!("Failed to get lnd client: {:?}", e);
-                                        ()
-                                    }),
-                            );
-                            Ok(())
-                        }
+                        let state_store = Arc::clone(&state_store);
+                        let metadata_store = Arc::clone(&metadata_store);
+                        let lqs_api_client = Arc::clone(&lqs_api_client);
+                        info!("Attempting to get lnd client for {}", id);
+                        tokio::spawn(
+                            lightning_client_factory
+                                .new_client()
+                                .and_then(move |lnd_client| {
+                                    info!("Got lnd client for {}", id);
+                                    spawn_state_machine(
+                                        id,
+                                        start_state,
+                                        state_store.as_ref(),
+                                        metadata_store.as_ref(),
+                                        metadata,
+                                        Box::new(LqsEventsForErc20::new(
+                                            QueryIdCache::wrap(Arc::clone(&lqs_api_client)),
+                                            FirstMatch::new(
+                                                Arc::clone(&lqs_api_client),
+                                                ethereum_poll_interval,
+                                            ),
+                                        )),
+                                        Box::new(BobLightningEvents::new(Arc::new(Mutex::new(
+                                            lnd_client,
+                                        )))),
+                                        Box::new(BobToAlice::new(Box::new(response_future))),
+                                    );
+                                    Ok(())
+                                })
+                                .map_err(|e| {
+                                    error!("Failed to get lnd client: {:?}", e);
+                                    ()
+                                }),
+                        );
+                        Ok(())
                     }
                 }
             })
@@ -244,15 +231,28 @@ impl<M: MetadataStore<SwapId>, S: StateStore<SwapId>> SwapRequestHandler<M, S> {
     }
 }
 
-fn spawn_state_machine<AL: Ledger, BL: Ledger, AA: Asset, BA: Asset, S: StateStore<SwapId>>(
+fn spawn_state_machine<
+    AL: Ledger,
+    BL: Ledger,
+    AA: Asset,
+    BA: Asset,
+    S: StateStore<SwapId>,
+    M: MetadataStore<SwapId>,
+>(
     id: SwapId,
     start_state: Start<Bob<AL, BL, AA, BA>>,
     state_store: &S,
+    metadata_store: &M,
+    metadata: Metadata,
     alpha_ledger_events: Box<LedgerEvents<AL, AA>>,
     beta_ledger_events: Box<LedgerEvents<BL, BA>>,
     communication_events: Box<CommunicationEvents<Bob<AL, BL, AA, BA>>>,
 ) {
     let state = SwapStates::Start(start_state);
+
+    metadata_store
+        .insert(id, metadata)
+        .expect("Failed to store metadata for swap");
 
     let save_state = state_store
         .insert(id, state.clone())
