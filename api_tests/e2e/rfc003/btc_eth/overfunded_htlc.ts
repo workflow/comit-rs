@@ -2,15 +2,15 @@ import "chai/register-should";
 import { ethers } from "ethers";
 import { Actor } from "../../../lib/actor";
 import * as bitcoin from "../../../lib/bitcoin";
-import { ActionKind, LedgerAction, SwapRequest } from "../../../lib/comit";
 import "../../../lib/setup_chai";
-import {
-    createTests,
-    hasAction,
-    mapToAction,
-    Step,
-} from "../../../lib/test_creator";
+import { createTests, mapToAction, Step } from "../../../lib/test_creator";
 import { HarnessGlobal } from "../../../lib/util";
+import {
+    ActionKind,
+    CreateSwapRequestPayload,
+    LedgerAction,
+} from "../../../lib2/cnd_http_api";
+import { hasAction } from "../../../lib2/create_actors";
 
 declare var global: HarnessGlobal;
 
@@ -38,7 +38,7 @@ declare var global: HarnessGlobal;
     await alice.wallet.btc().fund(20);
     await bitcoin.generate();
 
-    const swapRequest: SwapRequest = {
+    const swapRequest: CreateSwapRequestPayload = {
         alpha_ledger: {
             name: "bitcoin",
             network: "regtest",

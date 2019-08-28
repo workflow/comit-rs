@@ -5,6 +5,7 @@ import { execSync } from "child_process";
 import commander from "commander";
 import * as fs from "fs";
 import glob from "glob";
+import { Configuration, configure, getLogger } from "log4js";
 import Mocha from "mocha";
 import path from "path";
 import rimraf from "rimraf";
@@ -47,6 +48,36 @@ export interface E2ETestConfig {
 }
 
 async function runTests(testFiles: string[]) {
+    const testFileAppenders = testFiles.reduce(
+        (appenders, fileName) => {
+            appenders[fileName] = {
+                type: "file",
+                filename: `${logDir}/${fileName}/test-suite.log`,
+            };
+
+            return appenders;
+        },
+        {} as Configuration["appenders"]
+    );
+
+    configure({
+        appenders: {
+            ...testFileAppenders,
+            harness: {
+                type: "file",
+                filename: `${logDir}/harness.log`,
+            },
+        },
+        categories: {
+            default: {
+                appenders: [...testFiles, "harness"],
+                level: "DEBUG",
+            },
+        },
+    });
+
+    const logger = getLogger("harness");
+
     const ledgerRunner = new LedgerRunner(logDir);
 
     const nodeRunner = new CndRunner(
@@ -87,12 +118,16 @@ async function runTests(testFiles: string[]) {
     });
 
     for (const testFile of testFiles) {
+        logger.info("Running test file ", testFile);
+
         const testDir = path.dirname(testFile);
         const config = (parse(
             fs.readFileSync(testDir + "/config.toml", "utf8")
         ) as unknown) as E2ETestConfig;
 
         if (config.ledgers) {
+            logger.info("Booting ledgers", config.ledgers);
+
             await ledgerRunner.ensureLedgersRunning(config.ledgers);
 
             const ledgerConfigs = await ledgerRunner.getLedgerConfig();
@@ -108,14 +143,20 @@ async function runTests(testFiles: string[]) {
                     : undefined,
             });
 
+            logger.info("Booting btsieve with config", btsieveConfig);
+
             await btsieveRunner.ensureBtsieveRunningWithConfig(btsieveConfig);
         }
 
         if (config.actors) {
+            logger.info("Booting cnds for", config.actors);
+
             await nodeRunner.ensureCndsRunning(config.actors);
         }
 
         global.ledgerConfigs = await ledgerRunner.getLedgerConfig();
+
+        logger.info("Executing tests");
 
         const runTests = new Promise(res => {
             new Mocha({ bail: true, ui: "bdd", delay: true })

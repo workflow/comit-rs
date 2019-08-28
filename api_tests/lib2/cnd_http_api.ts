@@ -1,4 +1,26 @@
-/// HTTP API
+export interface Asset {
+    name: string;
+
+    [parameter: string]: string;
+}
+
+export interface Ledger {
+    name: string;
+
+    [parameter: string]: string;
+}
+
+export interface CreateSwapRequestPayload {
+    alpha_ledger: Ledger;
+    beta_ledger: Ledger;
+    alpha_asset: Asset;
+    beta_asset: Asset;
+    beta_ledger_redeem_identity?: string;
+    alpha_ledger_refund_identity?: string;
+    alpha_expiry: number;
+    beta_expiry: number;
+    peer: string;
+}
 
 export type LedgerAction =
     | {
@@ -32,29 +54,6 @@ export type LedgerAction =
               min_block_timestamp?: number;
           };
       };
-
-export interface Asset {
-    name: string;
-    quantity: string;
-    token_contract?: string;
-}
-
-export interface Ledger {
-    name: string;
-    network: string;
-}
-
-export interface SwapRequest {
-    alpha_ledger: Ledger;
-    beta_ledger: Ledger;
-    alpha_asset: Asset;
-    beta_asset: Asset;
-    beta_ledger_redeem_identity?: string;
-    alpha_ledger_refund_identity?: string;
-    alpha_expiry: number;
-    beta_expiry: number;
-    peer: string;
-}
 
 export enum ActionKind {
     Accept = "accept",

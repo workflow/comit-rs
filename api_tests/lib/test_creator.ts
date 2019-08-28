@@ -1,8 +1,9 @@
 import { expect, request } from "chai";
 import { Response } from "superagent";
 import { Action, EmbeddedRepresentationSubEntity, Entity } from "../gen/siren";
+import { ActionKind, LedgerAction } from "../lib2/cnd_http_api";
+import { hasAction } from "../lib2/create_actors";
 import { Actor } from "./actor";
-import { ActionKind, LedgerAction } from "./comit";
 import "./setup_chai";
 
 export interface Test {
@@ -141,12 +142,6 @@ export function createTests(
     }
 
     return swapLocations;
-}
-
-export function hasAction(actionKind: ActionKind) {
-    return (body: Entity) =>
-        body.actions.findIndex(candidate => candidate.name === actionKind) !==
-        -1;
 }
 
 export function mapToAction(actionKind: ActionKind): (body: Entity) => Action {

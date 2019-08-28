@@ -2,10 +2,13 @@ import "chai/register-should";
 import { ethers } from "ethers";
 import { Actor } from "../../../lib/actor";
 import * as bitcoin from "../../../lib/bitcoin";
-import { ActionKind, SwapRequest } from "../../../lib/comit";
 import "../../../lib/setup_chai";
 import { createTests, Step } from "../../../lib/test_creator";
 import { HarnessGlobal } from "../../../lib/util";
+import {
+    ActionKind,
+    CreateSwapRequestPayload,
+} from "../../../lib2/cnd_http_api";
 
 declare var global: HarnessGlobal;
 
@@ -34,7 +37,7 @@ declare var global: HarnessGlobal;
 
     const bobInitialWei = await bob.wallet.eth().ethBalance();
 
-    const swapRequest: SwapRequest = {
+    const swapRequest: CreateSwapRequestPayload = {
         alpha_ledger: {
             name: "bitcoin",
             network: "regtest",
