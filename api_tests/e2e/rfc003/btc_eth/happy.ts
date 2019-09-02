@@ -4,7 +4,7 @@ import { createActors } from "../../../lib2/create_actors";
 setTimeout(function() {
     describe("happy path", () => {
         it("bitcoin ether", async () => {
-            const { alice, bob } = await createActors(
+            const { alice, bob } = await createActors(() =>
                 getLogger("e2e/rfc003/btc_eth/happy.ts")
             );
 

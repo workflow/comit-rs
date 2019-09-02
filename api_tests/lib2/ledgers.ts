@@ -1,9 +1,12 @@
 import BitcoinRpcClient from "bitcoin-core";
+import { JsonRpcProvider } from "ethers/providers";
+import { EthereumNodeConfig } from "../lib/ethereum";
 import Unsupported from "./unsupported";
 
 // to be removed once we move to the new test runner
 import { BitcoinNodeConfig } from "../lib/bitcoin";
 import { HarnessGlobal } from "../lib/util";
+
 declare var global: HarnessGlobal;
 
 export interface LedgerDataProvider {
@@ -11,6 +14,13 @@ export interface LedgerDataProvider {
 }
 
 class EthereumLedger implements LedgerDataProvider {
+    // @ts-ignore
+    private readonly client: JsonRpcProvider;
+
+    constructor(ethereumLedgerConfig: EthereumNodeConfig) {
+        this.client = new JsonRpcProvider(ethereumLedgerConfig.rpc_url);
+    }
+
     public newIdentity(): Promise<string> {
         return undefined;
     }
@@ -65,7 +75,15 @@ export default async function ledgerDataProvider(
                 );
             }
 
-            return Promise.resolve(new EthereumLedger());
+            const ethereumLedgerConfig = global.ledgerConfigs.ethereum;
+
+            if (!ethereumLedgerConfig) {
+                throw new Unsupported(
+                    `Ledger '${name}' has not been initialized by the harness`
+                );
+            }
+
+            return Promise.resolve(new EthereumLedger(ethereumLedgerConfig));
         }
         case "bitcoin": {
             if (parameters.network && parameters.network !== "regtest") {

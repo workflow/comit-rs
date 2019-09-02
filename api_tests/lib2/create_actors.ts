@@ -36,14 +36,23 @@ export class Actors {
     }
 }
 
-export async function createActors(logger: Logger): Promise<Actors> {
-    logger.info("Creating actors: Alice, Bob");
+export async function createActors(
+    loggerFactory: () => Logger
+): Promise<Actors> {
+    const aliceLogger = loggerFactory();
+    aliceLogger.addContext("role", "alice");
 
     const alice = new Actor(
-        logger,
+        aliceLogger,
         `http://localhost:${ALICE_CONFIG.httpApiPort}`
     );
-    const bob = new Actor(logger, `http://localhost:${BOB_CONFIG.httpApiPort}`);
+
+    const bobLogger = loggerFactory();
+    bobLogger.addContext("role", "bob");
+    const bob = new Actor(
+        bobLogger,
+        `http://localhost:${BOB_CONFIG.httpApiPort}`
+    );
 
     const actors = new Actors(
         new Map<string, Actor>([["alice", alice], ["bob", bob]])
@@ -64,6 +73,7 @@ class Actor {
     private mostRecentSwap: string;
 
     constructor(private readonly logger: Logger, cndEndpoint: string) {
+        logger.info("Created new actor at %s", cndEndpoint);
         this.restClient = new RestClient("cnd-test-suite", cndEndpoint);
 
         // Initialize with default dependencies so that we don't get type check errors but fail at runtime
@@ -126,6 +136,8 @@ class Actor {
         const headers = response.headers as any;
         const location = headers.Location;
 
+        this.logger.debug("Created new swap at %s", location);
+
         if (location) {
             this.mostRecentSwap = location;
 
@@ -136,6 +148,13 @@ class Actor {
             // (Ab)-use the secret-hash for now to uniquely identify the same swap on both sides.
             const secretHash =
                 swap.result.properties.state.communication.secret_hash;
+
+            this.logger.debug(
+                "Swap %s has secret hash %s",
+                location,
+                secretHash
+            );
+
             to.mostRecentSwap = await to.findSwapWithSecretHash(secretHash);
         }
 
@@ -201,6 +220,8 @@ class Actor {
      * Most likely, you want to combine the returned Promise with a timeout to not recurse forever.
      */
     private async findSwapWithSecretHash(secretHash: string): Promise<string> {
+        this.logger.debug("Looking for swap with secret hash %s", secretHash);
+
         const allSwaps = await this.restClient.get<Entity>("/swaps");
 
         const entities: EmbeddedRepresentationSubEntity[] =
@@ -228,6 +249,13 @@ class Actor {
             const selfLink = matchingSwap.links.find(link =>
                 link.rel.includes("self")
             ).href;
+
+            this.logger.debug(
+                "Found swap with secret hash %s as %s",
+                secretHash,
+                selfLink
+            );
+
             return Promise.resolve(selfLink);
         } else {
             await sleep(500);
