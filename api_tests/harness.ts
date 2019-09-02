@@ -53,6 +53,10 @@ async function runTests(testFiles: string[]) {
             appenders[fileName] = {
                 type: "file",
                 filename: `${logDir}/${fileName}/test-suite.log`,
+                layout: {
+                    type: "pattern",
+                    pattern: '%d %5p %X{role}: %m'
+                }
             };
 
             return appenders;

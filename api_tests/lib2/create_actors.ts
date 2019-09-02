@@ -1,18 +1,14 @@
-import { parseEther } from "ethers/utils";
-import { Logger } from "log4js";
-import { IRestResponse, RestClient } from "typed-rest-client/RestClient";
-import { EmbeddedRepresentationSubEntity, Entity } from "../gen/siren";
-import { ALICE_CONFIG, BOB_CONFIG } from "../lib/config";
-import { sleep } from "../lib/util";
-import {
-    ActionKind,
-    Asset,
-    CreateSwapRequestPayload,
-    Ledger,
-} from "./cnd_http_api";
-import ledgerDataProvider, { LedgerDataProvider, NullLedger } from "./ledgers";
+import {parseEther} from "ethers/utils";
+import {Logger} from "log4js";
+import {IRestResponse, RestClient} from "typed-rest-client/RestClient";
+import {Action, EmbeddedRepresentationSubEntity, Entity} from "../gen/siren";
+import {ALICE_CONFIG, BOB_CONFIG} from "../lib/config";
+import {sleep} from "../lib/util";
+import {ActionKind, Asset, CreateSwapRequestPayload, Ledger,} from "./cnd_http_api";
+import ledgerDataProvider, {LedgerDataProvider, NullLedger} from "./ledgers";
 import rejectAfter from "./reject_after";
 import Unsupported from "./unsupported";
+import URI from "urijs";
 
 export class Actors {
     constructor(private readonly actors: Map<string, Actor>) {}
@@ -39,20 +35,13 @@ export class Actors {
 export async function createActors(
     loggerFactory: () => Logger
 ): Promise<Actors> {
-    const aliceLogger = loggerFactory();
-    aliceLogger.addContext("role", "alice");
-
     const alice = new Actor(
-        aliceLogger,
+        loggerFactory,
+        "alice",
         `http://localhost:${ALICE_CONFIG.httpApiPort}`
     );
 
-    const bobLogger = loggerFactory();
-    bobLogger.addContext("role", "bob");
-    const bob = new Actor(
-        bobLogger,
-        `http://localhost:${BOB_CONFIG.httpApiPort}`
-    );
+    const bob = new Actor(loggerFactory, "bob", `http://localhost:${BOB_CONFIG.httpApiPort}`);
 
     const actors = new Actors(
         new Map<string, Actor>([["alice", alice], ["bob", bob]])
@@ -69,17 +58,23 @@ class Actor {
     public alphaLedgerDataProvider: LedgerDataProvider;
     public betaLedgerDataProvider: LedgerDataProvider;
 
-    private restClient: RestClient;
+    private readonly logger: Logger;
+    private readonly restClient: RestClient;
     private mostRecentSwap: string;
 
-    constructor(private readonly logger: Logger, cndEndpoint: string) {
-        logger.info("Created new actor at %s", cndEndpoint);
+    constructor(loggerFactory: () => Logger, private readonly name: string, cndEndpoint: string) {
+        this.logger = loggerFactory();
+        this.logger.addContext("role", name);
+
+        this.logger.info("Created new actor at %s", cndEndpoint);
         this.restClient = new RestClient("cnd-test-suite", cndEndpoint);
 
         // Initialize with default dependencies so that we don't get type check errors but fail at runtime
         this.actors = new Actors(new Map<string, Actor>());
         this.alphaLedgerDataProvider = new NullLedger("alphaLedger");
         this.betaLedgerDataProvider = new NullLedger("betaLedger");
+
+        // randomly generate keypair for this actor
     }
 
     public async getPeerId(): Promise<string> {
@@ -93,7 +88,7 @@ class Actor {
         // By default, we will send the swap request to bob
         const to = this.actors.bob;
 
-        this.logger.debug("Sending swap request to Bob");
+        this.logger.debug("Sending swap request to %s", to.name);
 
         const alphaLedger = defaultLedgerDescriptionForAsset(alphaAsset);
 
@@ -102,6 +97,8 @@ class Actor {
             alphaLedger,
             alphaAsset
         );
+
+        // make sure this actor owns the asset on alpha ledger
 
         const alphaLedgerDataProvider = await ledgerDataProvider(
             alphaLedger.name,
@@ -117,6 +114,8 @@ class Actor {
         );
         this.betaLedgerDataProvider = betaLedgerDataProvider;
         to.betaLedgerDataProvider = betaLedgerDataProvider;
+
+        // make sure the other actor owns the asset on beta ledger
 
         const payload: CreateSwapRequestPayload = {
             alpha_ledger: alphaLedger,
@@ -162,18 +161,23 @@ class Actor {
     }
 
     public async accept(): Promise<void> {
+
         const timeout = 3000;
 
-        const response = await Promise.race([
+        this.logger.debug("Accepting swap request %s with timeout of %dms", this.mostRecentSwap, timeout);
+
+        const swapResponse = await Promise.race([
             rejectAfter<IRestResponse<Entity>>(timeout),
             this.pollMostRecentSwapUntil(hasAction(ActionKind.Accept)),
         ]);
 
-        const acceptAction = response.result.actions.find(
+        const acceptAction = swapResponse.result.actions.find(
             action => action.name === ActionKind.Accept
         );
 
-        console.log(acceptAction);
+        const request = await this.buildRequestFromAction(acceptAction);
+
+        await this.restClient.client.request(request.method, request.url, JSON.stringify(request.body), {});
     }
 
     public async fund(): Promise<void> {
@@ -189,11 +193,9 @@ class Actor {
     }
 
     private async additionalIdentities(alphaAsset: string, betaAsset: string) {
-        const myBetaLedgerRedeemIdentity = await this.betaLedgerDataProvider.newIdentity();
-
         if (alphaAsset === "bitcoin" && betaAsset === "ether") {
             return {
-                beta_ledger_redeem_identity: myBetaLedgerRedeemIdentity,
+                beta_ledger_redeem_identity: await this.betaLedgerDataProvider.newIdentity(),
             };
         }
 
@@ -261,6 +263,75 @@ class Actor {
             await sleep(500);
             return this.findSwapWithSecretHash(secretHash);
         }
+    }
+
+    private async buildRequestFromAction(action: Action) {
+        const data: any = {};
+
+        for (const field of action.fields || []) {
+            if (
+                field.class.some((e: string) => e === "ethereum") &&
+                field.class.some((e: string) => e === "address")
+            ) {
+                const provider = this.getLedgerProviderByName("ethereum");
+
+                const identity = await provider.newIdentity();
+                data[field.name] = identity;
+
+                this.logger.debug("Ethereum identity for action %s is %s", action.name, identity);
+            }
+
+            if (
+                field.class.some((e: string) => e === "bitcoin") &&
+                field.class.some((e: string) => e === "feePerWU")
+            ) {
+                data[field.name] = 20;
+            }
+
+            if (
+                field.class.some((e: string) => e === "bitcoin") &&
+                field.class.some((e: string) => e === "address")
+            ) {
+                const provider = this.getLedgerProviderByName("bitcoin");
+
+                const identity = await provider.newIdentity();
+                data[field.name] = identity;
+
+                this.logger.debug("Bitcoin identity for action %s is %s", action.name, identity);
+            }
+        }
+
+        const method = action.method || "GET";
+        if (method === "GET") {
+            return {
+                method,
+                url: new URI(action.href).query(data).toString(),
+                body: {},
+            };
+        } else {
+            if (action.type !== "application/json") {
+                throw new Error(
+                    "Only application/json is supported for non-GET requests."
+                );
+            }
+
+            return {
+                method,
+                url: action.href,
+                body: data,
+            };
+        }
+    }
+
+    private getLedgerProviderByName(name: string): LedgerDataProvider {
+        if (this.alphaLedgerDataProvider.name === name) {
+            return this.alphaLedgerDataProvider
+        }
+        if (this.betaLedgerDataProvider.name === name) {
+            return this.betaLedgerDataProvider
+        }
+
+        throw new Error(`Neither the alpha nor the beta ledger of this actor is ${name}`)
     }
 }
 

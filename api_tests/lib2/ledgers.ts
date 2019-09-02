@@ -10,12 +10,14 @@ import { HarnessGlobal } from "../lib/util";
 declare var global: HarnessGlobal;
 
 export interface LedgerDataProvider {
+    name: string
     newIdentity(): Promise<string>;
 }
 
 class EthereumLedger implements LedgerDataProvider {
     // @ts-ignore
     private readonly client: JsonRpcProvider;
+    public name = "ethereum";
 
     constructor(ethereumLedgerConfig: EthereumNodeConfig) {
         this.client = new JsonRpcProvider(ethereumLedgerConfig.rpc_url);
@@ -29,6 +31,7 @@ class EthereumLedger implements LedgerDataProvider {
 class BitcoinLedger implements LedgerDataProvider {
     // @ts-ignore
     private readonly client: BitcoinRpcClient;
+    public name = "bitcoin";
 
     constructor(bitcoinNodeConfig: BitcoinNodeConfig) {
         this.client = new BitcoinRpcClient({
@@ -46,11 +49,7 @@ class BitcoinLedger implements LedgerDataProvider {
 }
 
 export class NullLedger implements LedgerDataProvider {
-    private readonly name: string;
-
-    constructor(name: string) {
-        this.name = name;
-    }
+    constructor(public readonly name: string) { }
 
     public newIdentity(): Promise<string> {
         return this.fail();
