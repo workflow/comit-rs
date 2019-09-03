@@ -32,6 +32,34 @@ export class Actors {
     }
 }
 
+interface AllWallets {
+    bitcoin?: BitcoinWallet;
+    ether?: EtherWallet;
+}
+
+class Wallets {
+    constructor(private readonly wallets: AllWallets) {}
+
+    get bitcoin(): BitcoinWallet {
+        return this.getWalletForLedger("bitcoin");
+    }
+
+    get ethereum(): EtherWallet {
+        return this.getWalletForLedger("ether");
+    }
+
+    private getWalletForLedger<K extends keyof AllWallets>(name: K): AllWallets[K] {
+
+        const wallet = this.wallets[name];
+
+        if (!wallet) {
+            throw new Error(`Wallet for ${name} was not initialized`);
+        }
+
+        return wallet;
+    }
+}
+
 export async function createActors(
     loggerFactory: () => Logger
 ): Promise<Actors> {
@@ -53,10 +81,14 @@ export async function createActors(
     return Promise.resolve(actors);
 }
 
+class BitcoinWallet {}
+class EtherWallet {}
+
+export type PossibleAssets = "bitcoin" | "ether";
+
 class Actor {
     public actors: Actors;
-    public alphaLedgerDataProvider: LedgerDataProvider;
-    public betaLedgerDataProvider: LedgerDataProvider;
+    public wallets: Wallets;
 
     private readonly logger: Logger;
     private readonly restClient: RestClient;
@@ -71,10 +103,7 @@ class Actor {
 
         // Initialize with default dependencies so that we don't get type check errors but fail at runtime
         this.actors = new Actors(new Map<string, Actor>());
-        this.alphaLedgerDataProvider = new NullLedger("alphaLedger");
-        this.betaLedgerDataProvider = new NullLedger("betaLedger");
-
-        // randomly generate keypair for this actor
+        this.wallets = new Wallets({});
     }
 
     public async getPeerId(): Promise<string> {
@@ -82,8 +111,8 @@ class Actor {
     }
 
     public async sendRequest(
-        alphaAsset: string,
-        betaAsset: string
+        alphaAsset: PossibleAssets,
+        betaAsset: PossibleAssets
     ): Promise<IRestResponse<void>> {
         // By default, we will send the swap request to bob
         const to = this.actors.bob;
@@ -97,6 +126,8 @@ class Actor {
             alphaLedger,
             alphaAsset
         );
+
+
 
         // make sure this actor owns the asset on alpha ledger
 
@@ -335,7 +366,7 @@ class Actor {
     }
 }
 
-function defaultLedgerDescriptionForAsset(asset: string): Ledger {
+function defaultLedgerDescriptionForAsset(asset: PossibleAssets): Ledger {
     switch (asset) {
         case "bitcoin": {
             return {
@@ -349,13 +380,10 @@ function defaultLedgerDescriptionForAsset(asset: string): Ledger {
                 network: "regtest",
             };
         }
-        default: {
-            throw new Unsupported(`Asset '${asset}'`);
-        }
     }
 }
 
-function defaultAssetDescriptionForAsset(asset: string): Asset {
+function defaultAssetDescriptionForAsset(asset: PossibleAssets): Asset {
     switch (asset) {
         case "bitcoin": {
             return {
@@ -368,9 +396,6 @@ function defaultAssetDescriptionForAsset(asset: string): Asset {
                 name: "ether",
                 quantity: parseEther("10").toString(),
             };
-        }
-        default: {
-            throw new Unsupported(`Asset '${asset}'`);
         }
     }
 }
