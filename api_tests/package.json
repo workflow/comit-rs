@@ -15,6 +15,7 @@
     "author": "CoBloX Team",
     "license": "ISC",
     "dependencies": {
+        "bcoin": "^1.0.2",
         "bignumber.js": "^9.0.0",
         "bitcoin-core": "^2.2.0",
         "bitcoinjs-lib": "^5.1.5",
@@ -50,6 +51,8 @@
         "@types/rimraf": "^2.0.2",
         "@types/scrypt": "^6.0.0",
         "@types/urijs": "^1.19.3",
+        "dts-gen": "^0.5.8",
+        "dtsmake": "^0.0.10",
         "json-schema-to-typescript": "^7.0.0",
         "prettier": "^1.15.2",
         "ts-node": "^8.3.0",

@@ -1,11 +1,14 @@
+export type AssetKind = "bitcoin" | "ether" | "erc20";
+export type LedgerKind = "bitcoin" | "ethereum";
+
 export interface Asset {
-    name: string;
+    name: AssetKind;
 
     [parameter: string]: string;
 }
 
 export interface Ledger {
-    name: string;
+    name: LedgerKind;
 
     [parameter: string]: string;
 }

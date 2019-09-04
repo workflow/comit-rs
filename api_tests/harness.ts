@@ -55,8 +55,8 @@ async function runTests(testFiles: string[]) {
                 filename: `${logDir}/${fileName}/test-suite.log`,
                 layout: {
                     type: "pattern",
-                    pattern: '%d %5p %X{role}: %m'
-                }
+                    pattern: "%d %5p %X{role}: %m",
+                },
             };
 
             return appenders;
@@ -134,18 +134,11 @@ async function runTests(testFiles: string[]) {
 
             await ledgerRunner.ensureLedgersRunning(config.ledgers);
 
-            const ledgerConfigs = await ledgerRunner.getLedgerConfig();
-
-            // We don't stop the ledgers between the test files
-            // Make sure the btsieve we start is only configured to the ledgers that it needs as per the config file of the test
-            const btsieveConfig = createBtsieveConfig({
-                bitcoin: config.ledgers.includes("bitcoin")
-                    ? ledgerConfigs.bitcoin
-                    : undefined,
-                ethereum: config.ledgers.includes("ethereum")
-                    ? ledgerConfigs.ethereum
-                    : undefined,
-            });
+            const ledgerConfig = await ledgerRunner.getLedgerConfig();
+            const btsieveConfig = createBtsieveConfig(
+                config.ledgers,
+                ledgerConfig
+            );
 
             logger.info("Booting btsieve with config", btsieveConfig);
 

@@ -5,12 +5,12 @@ import * as bitcoin from "../../../lib/bitcoin";
 import "../../../lib/setup_chai";
 import { createTests, mapToAction, Step } from "../../../lib/test_creator";
 import { HarnessGlobal } from "../../../lib/util";
+import { hasAction } from "../../../lib2/actors/actor";
 import {
     ActionKind,
     CreateSwapRequestPayload,
     LedgerAction,
 } from "../../../lib2/cnd_http_api";
-import { hasAction } from "../../../lib2/create_actors";
 
 declare var global: HarnessGlobal;
 

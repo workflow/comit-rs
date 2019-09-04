@@ -1,8 +1,8 @@
 import { expect, request } from "chai";
 import { Response } from "superagent";
 import { Action, EmbeddedRepresentationSubEntity, Entity } from "../gen/siren";
+import { hasAction } from "../lib2/actors/actor";
 import { ActionKind, LedgerAction } from "../lib2/cnd_http_api";
-import { hasAction } from "../lib2/create_actors";
 import { Actor } from "./actor";
 import "./setup_chai";
 

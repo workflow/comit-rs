@@ -122,17 +122,21 @@ export const DAVID_CONFIG = new E2ETestActorConfig(
 );
 
 export function createBtsieveConfig(
+    ledgers: string[],
     ledgerConfig: LedgerConfig
 ): BtsieveConfigFile {
     const config: BtsieveConfigFile = {
         ...BTSIEVE_BASE_CONFIG,
     };
 
-    if (ledgerConfig.bitcoin) {
+    // We don't stop the ledgers between the test files
+    // Make sure the btsieve we start is only configured to the ledgers that it needs as per the config file of the test
+
+    if (ledgers.includes("bitcoin")) {
         config.bitcoin = btsieveBitcoinConfig(ledgerConfig.bitcoin);
     }
 
-    if (ledgerConfig.ethereum) {
+    if (ledgers.includes("ethereum")) {
         config.ethereum = btsieveEthereumConfig(ledgerConfig.ethereum);
     }
 

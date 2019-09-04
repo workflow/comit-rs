@@ -6,9 +6,29 @@ import * as bitcoin from "./bitcoin";
 import { BitcoinNodeConfig } from "./bitcoin";
 import { EthereumNodeConfig } from "./ethereum";
 
-export interface LedgerConfig {
+export interface LedgerConfigs {
     bitcoin?: BitcoinNodeConfig;
     ethereum?: EthereumNodeConfig;
+}
+
+export class LedgerConfig {
+    constructor(private readonly inner: LedgerConfigs) {}
+
+    get bitcoin(): BitcoinNodeConfig {
+        if (!this.inner.bitcoin) {
+            throw new Error("BitcoinNodeConfig has not been initialized");
+        }
+
+        return this.inner.bitcoin;
+    }
+
+    get ethereum(): EthereumNodeConfig {
+        if (!this.inner.ethereum) {
+            throw new Error("BitcoinNodeConfig has not been initialized");
+        }
+
+        return this.inner.ethereum;
+    }
 }
 
 export class LedgerRunner {
@@ -91,10 +111,10 @@ export class LedgerRunner {
     }
 
     public async getLedgerConfig(): Promise<LedgerConfig> {
-        return {
+        return new LedgerConfig({
             bitcoin: await this.getBitcoinClientConfig().catch(() => undefined),
             ethereum: await this.getEthereumNodeConfig().catch(() => undefined),
-        };
+        });
     }
 
     private async getBitcoinClientConfig(): Promise<BitcoinNodeConfig> {
@@ -110,6 +130,7 @@ export class LedgerRunner {
             return {
                 host: container.getContainerIpAddress(),
                 rpcPort: container.getMappedPort(18443),
+                p2pPort: container.getMappedPort(18444),
                 zmqPort: container.getMappedPort(28332),
                 username: "__cookie__",
                 password,
@@ -166,7 +187,11 @@ async function startBitcoinContainer(): Promise<StartedTestContainer> {
             "-zmqpubrawtx=tcp://*:28333",
             "-acceptnonstdtxn=0",
         ])
-        .withExposedPorts(18443, 28332)
+        .withExposedPorts(
+            18443, // rpc
+            18444, // p2p
+            28332 // zmq
+        )
         .withWaitStrategy(new LogWaitStrategy("Flushed wallet.dat"))
         .start();
 }
