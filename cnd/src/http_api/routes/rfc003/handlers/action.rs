@@ -15,9 +15,9 @@ use crate::{
             actions::{Action, ActionKind},
             bob::BobSpawner,
             messages::{AcceptResponseBody, DeclineResponseBody},
-            state_store::{InMemoryStateStore, StateStore},
+            state_store::StateStore,
         },
-        InMemoryMetadataStore, MetadataStore, SwapId,
+        MetadataStore, SwapId,
     },
 };
 use futures::sync::oneshot;

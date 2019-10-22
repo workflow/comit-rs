@@ -25,7 +25,6 @@ use std::sync::Arc;
 use warp::{Rejection, Reply};
 
 pub use self::swap_state::{LedgerState, SwapCommunication, SwapCommunicationState, SwapState};
-use crate::swap_protocols::rfc003::bob::BobSpawner;
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn post_swap<A: AliceSpawner>(

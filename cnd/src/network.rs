@@ -2,9 +2,10 @@ use crate::{
     libp2p_comit_ext::{FromHeader, ToHeader},
     swap_protocols::{
         asset::{Asset, AssetKind},
+        bob,
         rfc003::{
             self,
-            bob::{BobSpawner, InsertState},
+            bob::InsertState,
             messages::{Decision, DeclineResponseBody, SwapDeclineReason},
         },
         HashFunction, LedgerKind, SwapId, SwapProtocol,
@@ -32,12 +33,12 @@ use tokio::runtime::TaskExecutor;
 
 #[derive(NetworkBehaviour)]
 #[allow(missing_debug_implementations)]
-pub struct ComitNode<TSubstream, B> {
+pub struct ComitNode<TSubstream> {
     comit: Comit<TSubstream>,
     mdns: Mdns<TSubstream>,
 
     #[behaviour(ignore)]
-    bob: B,
+    bob: bob::ProtocolDependencies,
     #[behaviour(ignore)]
     task_executor: TaskExecutor,
     #[behaviour(ignore)]
@@ -59,8 +60,11 @@ impl Display for DialInformation {
     }
 }
 
-impl<TSubstream, B: InsertState> ComitNode<TSubstream, B> {
-    pub fn new(bob: B, task_executor: TaskExecutor) -> Result<Self, io::Error> {
+impl<TSubstream> ComitNode<TSubstream> {
+    pub fn new(
+        bob: bob::ProtocolDependencies,
+        task_executor: TaskExecutor,
+    ) -> Result<Self, io::Error> {
         let mut swap_headers = HashSet::new();
         swap_headers.insert("id".into());
         swap_headers.insert("alpha_ledger".into());
@@ -272,11 +276,8 @@ pub trait SwarmInfo: Send + Sync + 'static {
     fn listen_addresses(&self) -> Vec<Multiaddr>;
 }
 
-impl<
-        TTransport: Transport + Send + 'static,
-        B: InsertState + BobSpawner + Send + 'static,
-        TMuxer: StreamMuxer + Send + Sync + 'static,
-    > SwarmInfo for Mutex<Swarm<TTransport, ComitNode<SubstreamRef<Arc<TMuxer>>, B>>>
+impl<TTransport: Transport + Send + 'static, TMuxer: StreamMuxer + Send + Sync + 'static> SwarmInfo
+    for Mutex<Swarm<TTransport, ComitNode<SubstreamRef<Arc<TMuxer>>>>>
 where
     <TMuxer as StreamMuxer>::OutboundSubstream: Send + 'static,
     <TMuxer as StreamMuxer>::Substream: Send + 'static,
@@ -302,9 +303,7 @@ where
     }
 }
 
-impl<TSubstream, B: InsertState + BobSpawner> NetworkBehaviourEventProcess<BehaviourOutEvent>
-    for ComitNode<TSubstream, B>
-{
+impl<TSubstream> NetworkBehaviourEventProcess<BehaviourOutEvent> for ComitNode<TSubstream> {
     fn inject_event(&mut self, event: BehaviourOutEvent) {
         match event {
             BehaviourOutEvent::PendingInboundRequest { request, peer_id } => {
@@ -333,9 +332,7 @@ impl<TSubstream, B: InsertState + BobSpawner> NetworkBehaviourEventProcess<Behav
     }
 }
 
-impl<TSubstream, B> NetworkBehaviourEventProcess<libp2p::mdns::MdnsEvent>
-    for ComitNode<TSubstream, B>
-{
+impl<TSubstream> NetworkBehaviourEventProcess<libp2p::mdns::MdnsEvent> for ComitNode<TSubstream> {
     fn inject_event(&mut self, event: libp2p::mdns::MdnsEvent) {
         match event {
             MdnsEvent::Discovered(addresses) => {
