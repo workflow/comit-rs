@@ -1,4 +1,4 @@
-use crate::seed::Seed;
+use crate::{seed::Seed, swap_protocols::InMemoryMetadataStore};
 use btsieve::{bitcoin::BitcoindConnector, ethereum::Web3Connector};
 use std::sync::Arc;
 
@@ -34,9 +34,9 @@ pub mod bob {
 
     #[allow(missing_debug_implementations)]
     #[derive(Clone)]
-    pub struct ProtocolDependencies<T, S> {
+    pub struct ProtocolDependencies<S> {
         pub ledger_events: LedgerEventDependencies,
-        pub metadata_store: Arc<T>,
+        pub metadata_store: Arc<InMemoryMetadataStore>,
         pub state_store: Arc<S>,
         pub seed: Seed,
     }
