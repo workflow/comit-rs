@@ -15,6 +15,7 @@ use crate::{
         },
     },
     swap_protocols::{
+        bob,
         rfc003::{actions::ActionKind, alice::AliceSpawner, state_store::InMemoryStateStore},
         InMemoryMetadataStore, SwapId,
     },
@@ -52,30 +53,22 @@ pub fn get_swap(
         .map_err(into_rejection)
 }
 
-// TODO: Remove two arguments here (they are in the dependencies struct)
 #[allow(clippy::needless_pass_by_value)]
-pub fn action<B: BobSpawner>(
+pub fn action(
     method: http::Method,
     id: SwapId,
     action_kind: ActionKind,
     query_params: ActionExecutionParameters,
-    metadata_store: Arc<InMemoryMetadataStore>,
-    state_store: Arc<InMemoryStateStore>,
-    bob_spawner: B,
+    bob_protocol_dependencies: bob::ProtocolDependencies,
     body: serde_json::Value,
 ) -> Result<impl Reply, Rejection> {
-    let metadata_store = metadata_store.as_ref();
-    let state_store = state_store.as_ref();
-
     handle_action(
         method,
         id,
         action_kind,
         body,
         query_params,
-        metadata_store,
-        state_store,
-        &bob_spawner,
+        bob_protocol_dependencies,
     )
     .map(|body| warp::reply::json(&body))
     .map_err(into_rejection)

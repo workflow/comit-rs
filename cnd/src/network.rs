@@ -318,10 +318,7 @@ impl<TSubstream, B: InsertState + BobSpawner> NetworkBehaviourEventProcess<Behav
                         let future = err_future
                             .and_then(|response| {
                                 channel.send(response).unwrap_or_else(|_| {
-                                    log::debug!(
-                                        "failed to send response through
-                        channel"
-                                    )
+                                    log::debug!("failed to send response through channel")
                                 });
 
                                 Ok(())

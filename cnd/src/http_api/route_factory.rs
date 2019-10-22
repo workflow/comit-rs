@@ -69,8 +69,6 @@ pub fn create<C: Client, SI: SwarmInfo>(
         >())
         .and(warp::path::end())
         .and(warp::query::<http_api::action::ActionExecutionParameters>())
-        .and(metadata_store.clone())
-        .and(state_store.clone())
         .and(bob_protocol_dependencies.clone())
         .and(warp::body::json().or(empty_json_body).unify())
         .and_then(http_api::routes::rfc003::action);

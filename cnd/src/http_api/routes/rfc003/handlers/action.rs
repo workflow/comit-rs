@@ -10,6 +10,7 @@ use crate::{
     },
     swap_protocols::{
         actions::Actions,
+        bob,
         rfc003::{
             actions::{Action, ActionKind},
             bob::BobSpawner,
@@ -24,16 +25,17 @@ use http_api_problem::HttpApiProblem;
 use std::fmt::Debug;
 
 #[allow(clippy::unit_arg, clippy::let_unit_value)]
-pub fn handle_action<B: BobSpawner>(
+pub fn handle_action(
     method: http::Method,
     id: SwapId,
     action_kind: ActionKind,
     body: serde_json::Value,
     query_params: ActionExecutionParameters,
-    metadata_store: &InMemoryMetadataStore,
-    state_store: &InMemoryStateStore,
-    bob_spawner: &B,
+    bob_protocol_dependencies: bob::ProtocolDependencies,
 ) -> Result<ActionResponseBody, HttpApiProblem> {
+    let metadata_store = bob_protocol_dependencies.metadata_store.as_ref();
+    let state_store = bob_protocol_dependencies.state_store.as_ref();
+
     let metadata = metadata_store
         .get(id)?
         .ok_or_else(problem::swap_not_found)?;
@@ -67,7 +69,7 @@ pub fn handle_action<B: BobSpawner>(
                                     .send(message.clone())
                                     .expect("TODO: ERROR HANDLING");
 
-                                bob_spawner.spawn(request, message);
+                                bob_protocol_dependencies.spawn(request, message);
 
                                 Ok(ActionResponseBody::None)
                             }
@@ -85,7 +87,7 @@ pub fn handle_action<B: BobSpawner>(
                                     .send(message.clone())
                                     .expect("TODO: ERROR HANDLING");
 
-                                bob_spawner.spawn(request, message);
+                                bob_protocol_dependencies.spawn(request, message);
 
                                 Ok(ActionResponseBody::None)
                             }
