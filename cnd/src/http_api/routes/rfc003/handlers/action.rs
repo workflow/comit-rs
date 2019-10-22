@@ -29,9 +29,9 @@ pub fn handle_action(
     method: http::Method,
     id: SwapId,
     action_kind: ActionKind,
-    body: serde_json::Value,
     query_params: ActionExecutionParameters,
     bob_protocol_dependencies: bob::ProtocolDependencies,
+    body: serde_json::Value,
 ) -> Result<ActionResponseBody, HttpApiProblem> {
     let metadata_store = bob_protocol_dependencies.metadata_store.as_ref();
     let state_store = bob_protocol_dependencies.state_store.as_ref();

@@ -66,9 +66,9 @@ pub fn action(
         method,
         id,
         action_kind,
-        body,
         query_params,
         bob_protocol_dependencies,
+        body,
     )
     .map(|body| warp::reply::json(&body))
     .map_err(into_rejection)
