@@ -22,7 +22,7 @@ pub fn create<T: MetadataStore, S: state_store::StateStore, C: Client, SI: Swarm
     metadata_store: Arc<T>,
     state_store: Arc<S>,
     alice_protocol_dependencies: swap_protocols::alice::ProtocolDependencies<T, S, C>,
-    bob_protocol_dependencies: swap_protocols::bob::ProtocolDependencies<T, S>,
+    bob_protocol_dependencies: swap_protocols::bob::ProtocolDependencies,
     origin_auth: String,
     swarm_info: Arc<SI>,
     peer_id: PeerId,
