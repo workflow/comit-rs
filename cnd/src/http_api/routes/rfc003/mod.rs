@@ -15,8 +15,8 @@ use crate::{
         },
     },
     swap_protocols::{
-        rfc003::{actions::ActionKind, alice::AliceSpawner, state_store::StateStore},
-        MetadataStore, SwapId,
+        rfc003::{actions::ActionKind, alice::AliceSpawner, state_store::InMemoryStateStore},
+        InMemoryMetadataStore, SwapId,
     },
 };
 use hyper::header;
@@ -42,9 +42,9 @@ pub fn post_swap<A: AliceSpawner>(
 }
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn get_swap<T: MetadataStore, S: StateStore>(
-    metadata_store: Arc<T>,
-    state_store: Arc<S>,
+pub fn get_swap(
+    metadata_store: Arc<InMemoryMetadataStore>,
+    state_store: Arc<InMemoryStateStore>,
     id: SwapId,
 ) -> Result<impl Reply, Rejection> {
     handle_get_swap(metadata_store.as_ref(), state_store.as_ref(), id)
@@ -54,13 +54,13 @@ pub fn get_swap<T: MetadataStore, S: StateStore>(
 
 // TODO: Remove two arguments here (they are in the dependencies struct)
 #[allow(clippy::needless_pass_by_value)]
-pub fn action<T: MetadataStore, S: StateStore, B: BobSpawner>(
+pub fn action<B: BobSpawner>(
     method: http::Method,
     id: SwapId,
     action_kind: ActionKind,
     query_params: ActionExecutionParameters,
-    metadata_store: Arc<T>,
-    state_store: Arc<S>,
+    metadata_store: Arc<InMemoryMetadataStore>,
+    state_store: Arc<InMemoryStateStore>,
     bob_spawner: B,
     body: serde_json::Value,
 ) -> Result<impl Reply, Rejection> {

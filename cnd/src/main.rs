@@ -10,9 +10,7 @@ use cnd::{
     network::{self, SwarmInfo},
     seed::Seed,
     swap_protocols::{
-        self,
-        metadata_store::{InMemoryMetadataStore, MetadataStore},
-        rfc003::state_store::{InMemoryStateStore, StateStore},
+        self, metadata_store::InMemoryMetadataStore, rfc003::state_store::InMemoryStateStore,
         LedgerEventDependencies,
     },
 };
@@ -128,12 +126,12 @@ fn derive_key_pair(secret_seed: &Seed) -> identity::Keypair {
     identity::Keypair::Ed25519(key.into())
 }
 
-fn spawn_warp_instance<T: MetadataStore, S: StateStore, C: Client, SI: SwarmInfo>(
+fn spawn_warp_instance<C: Client, SI: SwarmInfo>(
     settings: &Settings,
-    metadata_store: Arc<T>,
-    state_store: Arc<S>,
-    alice_protocol_dependencies: swap_protocols::alice::ProtocolDependencies<T, S, C>,
-    bob_protocol_dependencies: swap_protocols::bob::ProtocolDependencies<T, S>,
+    metadata_store: Arc<InMemoryMetadataStore>,
+    state_store: Arc<InMemoryStateStore>,
+    alice_protocol_dependencies: swap_protocols::alice::ProtocolDependencies<C>,
+    bob_protocol_dependencies: swap_protocols::bob::ProtocolDependencies,
     swarm_info: Arc<SI>,
     peer_id: PeerId,
     runtime: &mut tokio::runtime::Runtime,

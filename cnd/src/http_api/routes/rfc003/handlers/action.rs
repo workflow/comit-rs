@@ -14,9 +14,9 @@ use crate::{
             actions::{Action, ActionKind},
             bob::BobSpawner,
             messages::{AcceptResponseBody, DeclineResponseBody},
-            state_store::StateStore,
+            state_store::{InMemoryStateStore, StateStore},
         },
-        MetadataStore, SwapId,
+        InMemoryMetadataStore, MetadataStore, SwapId,
     },
 };
 use futures::sync::oneshot;
@@ -24,14 +24,14 @@ use http_api_problem::HttpApiProblem;
 use std::fmt::Debug;
 
 #[allow(clippy::unit_arg, clippy::let_unit_value)]
-pub fn handle_action<T: MetadataStore, S: StateStore, B: BobSpawner>(
+pub fn handle_action<B: BobSpawner>(
     method: http::Method,
     id: SwapId,
     action_kind: ActionKind,
     body: serde_json::Value,
     query_params: ActionExecutionParameters,
-    metadata_store: &T,
-    state_store: &S,
+    metadata_store: &InMemoryMetadataStore,
+    state_store: &InMemoryStateStore,
     bob_spawner: &B,
 ) -> Result<ActionResponseBody, HttpApiProblem> {
     let metadata = metadata_store

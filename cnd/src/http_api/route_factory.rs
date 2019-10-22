@@ -2,7 +2,9 @@ use crate::{
     comit_client::Client,
     http_api,
     network::SwarmInfo,
-    swap_protocols::{self, rfc003::state_store, MetadataStore, SwapId},
+    swap_protocols::{
+        self, rfc003::state_store::InMemoryStateStore, InMemoryMetadataStore, SwapId,
+    },
 };
 use libp2p::PeerId;
 use std::sync::Arc;
@@ -18,10 +20,10 @@ pub fn new_action_link(id: &SwapId, action: &str) -> String {
     format!("{}/{}", swap_path(*id), action)
 }
 
-pub fn create<T: MetadataStore, S: state_store::StateStore, C: Client, SI: SwarmInfo>(
-    metadata_store: Arc<T>,
-    state_store: Arc<S>,
-    alice_protocol_dependencies: swap_protocols::alice::ProtocolDependencies<T, S, C>,
+pub fn create<C: Client, SI: SwarmInfo>(
+    metadata_store: Arc<InMemoryMetadataStore>,
+    state_store: Arc<InMemoryStateStore>,
+    alice_protocol_dependencies: swap_protocols::alice::ProtocolDependencies<C>,
     bob_protocol_dependencies: swap_protocols::bob::ProtocolDependencies,
     origin_auth: String,
     swarm_info: Arc<SI>,
