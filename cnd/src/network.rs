@@ -42,7 +42,7 @@ pub struct ComitNode<TSubstream> {
     #[behaviour(ignore)]
     task_executor: TaskExecutor,
     #[behaviour(ignore)]
-    request_channels: HashMap<SwapId, oneshot::Sender<Response>>,
+    request_channels: Arc<HashMap<SwapId, oneshot::Sender<()>>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -64,6 +64,7 @@ impl<TSubstream> ComitNode<TSubstream> {
     pub fn new(
         bob: bob::ProtocolDependencies,
         task_executor: TaskExecutor,
+        request_channels: Arc<HashMap<SwapId, oneshot::Sender<Response>>>,
     ) -> Result<Self, io::Error> {
         let mut swap_headers = HashSet::new();
         swap_headers.insert("id".into());
@@ -81,7 +82,7 @@ impl<TSubstream> ComitNode<TSubstream> {
             mdns: Mdns::new()?,
             bob,
             task_executor,
-            request_channels: HashMap::new(),
+            request_channels: Arc::clone(&request_channels),
         })
     }
 

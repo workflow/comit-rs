@@ -20,9 +20,9 @@ use crate::{
         MetadataStore, SwapId,
     },
 };
-use futures::sync::oneshot;
+use futures::{future::Future, sync::oneshot};
 use http_api_problem::HttpApiProblem;
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
 #[allow(clippy::unit_arg, clippy::let_unit_value)]
 pub fn handle_action(
@@ -32,6 +32,7 @@ pub fn handle_action(
     query_params: ActionExecutionParameters,
     bob_protocol_dependencies: bob::ProtocolDependencies,
     body: serde_json::Value,
+    request_channels: Arc<HashMap<SwapId, oneshot::Sender<()>>>,
 ) -> Result<ActionResponseBody, HttpApiProblem> {
     let metadata_store = bob_protocol_dependencies.metadata_store.as_ref();
     let state_store = bob_protocol_dependencies.state_store.as_ref();

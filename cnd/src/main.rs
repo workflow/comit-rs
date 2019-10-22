@@ -72,8 +72,9 @@ fn main() -> Result<(), failure::Error> {
     let local_peer_id = PeerId::from(local_key_pair.clone().public());
     log::info!("Starting with peer_id: {}", local_peer_id);
 
+    let request_channels: Arc::new(HashMap::new()),
     let transport = libp2p::build_development_transport(local_key_pair);
-    let behaviour = network::ComitNode::new(bob_protocol_dependencies.clone(), runtime.executor())?;
+    let behaviour = network::ComitNode::new(bob_protocol_dependencies.clone(), runtime.executor(), Arc::clone(request_channels))?;
 
     let mut swarm = Swarm::new(transport, behaviour, local_peer_id.clone());
 
@@ -103,6 +104,7 @@ fn main() -> Result<(), failure::Error> {
         Arc::clone(&swarm),
         local_peer_id,
         &mut runtime,
+        Arc::clone(request_channels),
     );
 
     spawn_comit_i_instance(settings, &mut runtime);
@@ -135,6 +137,7 @@ fn spawn_warp_instance<C: Client, SI: SwarmInfo>(
     swarm_info: Arc<SI>,
     peer_id: PeerId,
     runtime: &mut tokio::runtime::Runtime,
+    request_channels: Arc<HashMap<SwapId, oneshot::Sender<Response>>>,
 ) {
     let routes = route_factory::create(
         metadata_store,
@@ -144,6 +147,7 @@ fn spawn_warp_instance<C: Client, SI: SwarmInfo>(
         auth_origin(&settings),
         swarm_info,
         peer_id,
+        request_channels,
     );
 
     let listen_addr = SocketAddr::new(settings.http_api.address, settings.http_api.port);
