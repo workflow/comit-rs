@@ -62,30 +62,34 @@ impl LoadAcceptedSwap<Bitcoin, Ethereum, bitcoin::Amount, EtherQuantity> for Sql
 
         diesel::allow_tables_to_appear_in_same_query!(request_messages, accept_messages);
 
-        let connection = self.connect().await;
-        let key = Text(key);
+        let record: BitcoinEthereumBitcoinEtherAcceptedSwap = self
+            .do_in_transaction(|connection| {
+                let key = Text(key);
 
-        let record: BitcoinEthereumBitcoinEtherAcceptedSwap = request_messages::table
-            .inner_join(
-                accept_messages::table.on(request_messages::swap_id.eq(accept_messages::swap_id)),
-            )
-            .select((
-                request_messages::swap_id,
-                request_messages::bitcoin_network,
-                request_messages::ethereum_chain_id,
-                request_messages::bitcoin_amount,
-                request_messages::ether_amount,
-                request_messages::hash_function,
-                request_messages::bitcoin_refund_identity,
-                request_messages::ethereum_redeem_identity,
-                request_messages::bitcoin_expiry,
-                request_messages::ethereum_expiry,
-                request_messages::secret_hash,
-                accept_messages::bitcoin_redeem_identity,
-                accept_messages::ethereum_refund_identity,
-            ))
-            .filter(accept_messages::swap_id.eq(key))
-            .first(&*connection)?;
+                request_messages::table
+                    .inner_join(
+                        accept_messages::table
+                            .on(request_messages::swap_id.eq(accept_messages::swap_id)),
+                    )
+                    .select((
+                        request_messages::swap_id,
+                        request_messages::bitcoin_network,
+                        request_messages::ethereum_chain_id,
+                        request_messages::bitcoin_amount,
+                        request_messages::ether_amount,
+                        request_messages::hash_function,
+                        request_messages::bitcoin_refund_identity,
+                        request_messages::ethereum_redeem_identity,
+                        request_messages::bitcoin_expiry,
+                        request_messages::ethereum_expiry,
+                        request_messages::secret_hash,
+                        accept_messages::bitcoin_redeem_identity,
+                        accept_messages::ethereum_refund_identity,
+                    ))
+                    .filter(accept_messages::swap_id.eq(key))
+                    .first(connection)
+            })
+            .await?;
 
         Ok((
             Request {
@@ -150,30 +154,34 @@ impl LoadAcceptedSwap<Ethereum, Bitcoin, EtherQuantity, bitcoin::Amount> for Sql
 
         diesel::allow_tables_to_appear_in_same_query!(request_messages, accept_messages);
 
-        let connection = self.connect().await;
-        let key = Text(key);
+        let record: EthereumBitcoinEtherBitcoinAcceptedSwap = self
+            .do_in_transaction(|connection| {
+                let key = Text(key);
 
-        let record: EthereumBitcoinEtherBitcoinAcceptedSwap = request_messages::table
-            .inner_join(
-                accept_messages::table.on(request_messages::swap_id.eq(accept_messages::swap_id)),
-            )
-            .select((
-                request_messages::swap_id,
-                request_messages::ethereum_chain_id,
-                request_messages::bitcoin_network,
-                request_messages::ether_amount,
-                request_messages::bitcoin_amount,
-                request_messages::hash_function,
-                request_messages::ethereum_refund_identity,
-                request_messages::bitcoin_redeem_identity,
-                request_messages::ethereum_expiry,
-                request_messages::bitcoin_expiry,
-                request_messages::secret_hash,
-                accept_messages::ethereum_redeem_identity,
-                accept_messages::bitcoin_refund_identity,
-            ))
-            .filter(accept_messages::swap_id.eq(key))
-            .first(&*connection)?;
+                request_messages::table
+                    .inner_join(
+                        accept_messages::table
+                            .on(request_messages::swap_id.eq(accept_messages::swap_id)),
+                    )
+                    .select((
+                        request_messages::swap_id,
+                        request_messages::ethereum_chain_id,
+                        request_messages::bitcoin_network,
+                        request_messages::ether_amount,
+                        request_messages::bitcoin_amount,
+                        request_messages::hash_function,
+                        request_messages::ethereum_refund_identity,
+                        request_messages::bitcoin_redeem_identity,
+                        request_messages::ethereum_expiry,
+                        request_messages::bitcoin_expiry,
+                        request_messages::secret_hash,
+                        accept_messages::ethereum_redeem_identity,
+                        accept_messages::bitcoin_refund_identity,
+                    ))
+                    .filter(accept_messages::swap_id.eq(key))
+                    .first(connection)
+            })
+            .await?;
 
         Ok((
             Request {
@@ -239,31 +247,35 @@ impl LoadAcceptedSwap<Bitcoin, Ethereum, bitcoin::Amount, Erc20Token> for Sqlite
 
         diesel::allow_tables_to_appear_in_same_query!(request_messages, accept_messages);
 
-        let connection = self.connect().await;
-        let key = Text(key);
+        let record: BitcoinEthereumBitcoinErc20AcceptedSwap = self
+            .do_in_transaction(|connection| {
+                let key = Text(key);
 
-        let record: BitcoinEthereumBitcoinErc20AcceptedSwap = request_messages::table
-            .inner_join(
-                accept_messages::table.on(request_messages::swap_id.eq(accept_messages::swap_id)),
-            )
-            .select((
-                request_messages::swap_id,
-                request_messages::bitcoin_network,
-                request_messages::ethereum_chain_id,
-                request_messages::bitcoin_amount,
-                request_messages::erc20_token_contract,
-                request_messages::erc20_amount,
-                request_messages::hash_function,
-                request_messages::bitcoin_refund_identity,
-                request_messages::ethereum_redeem_identity,
-                request_messages::bitcoin_expiry,
-                request_messages::ethereum_expiry,
-                request_messages::secret_hash,
-                accept_messages::bitcoin_redeem_identity,
-                accept_messages::ethereum_refund_identity,
-            ))
-            .filter(accept_messages::swap_id.eq(key))
-            .first(&*connection)?;
+                request_messages::table
+                    .inner_join(
+                        accept_messages::table
+                            .on(request_messages::swap_id.eq(accept_messages::swap_id)),
+                    )
+                    .select((
+                        request_messages::swap_id,
+                        request_messages::bitcoin_network,
+                        request_messages::ethereum_chain_id,
+                        request_messages::bitcoin_amount,
+                        request_messages::erc20_token_contract,
+                        request_messages::erc20_amount,
+                        request_messages::hash_function,
+                        request_messages::bitcoin_refund_identity,
+                        request_messages::ethereum_redeem_identity,
+                        request_messages::bitcoin_expiry,
+                        request_messages::ethereum_expiry,
+                        request_messages::secret_hash,
+                        accept_messages::bitcoin_redeem_identity,
+                        accept_messages::ethereum_refund_identity,
+                    ))
+                    .filter(accept_messages::swap_id.eq(key))
+                    .first(connection)
+            })
+            .await?;
 
         Ok((
             Request {
@@ -332,31 +344,35 @@ impl LoadAcceptedSwap<Ethereum, Bitcoin, Erc20Token, bitcoin::Amount> for Sqlite
 
         diesel::allow_tables_to_appear_in_same_query!(request_messages, accept_messages);
 
-        let connection = self.connect().await;
-        let key = Text(key);
+        let record: EthereumBitcoinErc20BitcoinAcceptedSwap = self
+            .do_in_transaction(|connection| {
+                let key = Text(key);
 
-        let record: EthereumBitcoinErc20BitcoinAcceptedSwap = request_messages::table
-            .inner_join(
-                accept_messages::table.on(request_messages::swap_id.eq(accept_messages::swap_id)),
-            )
-            .select((
-                request_messages::swap_id,
-                request_messages::ethereum_chain_id,
-                request_messages::bitcoin_network,
-                request_messages::erc20_token_contract,
-                request_messages::erc20_amount,
-                request_messages::bitcoin_amount,
-                request_messages::hash_function,
-                request_messages::ethereum_refund_identity,
-                request_messages::bitcoin_redeem_identity,
-                request_messages::ethereum_expiry,
-                request_messages::bitcoin_expiry,
-                request_messages::secret_hash,
-                accept_messages::ethereum_redeem_identity,
-                accept_messages::bitcoin_refund_identity,
-            ))
-            .filter(accept_messages::swap_id.eq(key))
-            .first(&*connection)?;
+                request_messages::table
+                    .inner_join(
+                        accept_messages::table
+                            .on(request_messages::swap_id.eq(accept_messages::swap_id)),
+                    )
+                    .select((
+                        request_messages::swap_id,
+                        request_messages::ethereum_chain_id,
+                        request_messages::bitcoin_network,
+                        request_messages::erc20_token_contract,
+                        request_messages::erc20_amount,
+                        request_messages::bitcoin_amount,
+                        request_messages::hash_function,
+                        request_messages::ethereum_refund_identity,
+                        request_messages::bitcoin_redeem_identity,
+                        request_messages::ethereum_expiry,
+                        request_messages::bitcoin_expiry,
+                        request_messages::secret_hash,
+                        accept_messages::ethereum_redeem_identity,
+                        accept_messages::bitcoin_refund_identity,
+                    ))
+                    .filter(accept_messages::swap_id.eq(key))
+                    .first(connection)
+            })
+            .await?;
 
         Ok((
             Request {

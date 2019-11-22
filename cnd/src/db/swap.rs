@@ -45,11 +45,13 @@ impl Swap {
 impl Save for Sqlite {
     async fn save(&self, swap: Swap) -> anyhow::Result<()> {
         let insertable = InsertableSwap::from(swap);
-        let connection = self.connect().await;
 
-        diesel::insert_into(schema::rfc003_swaps::dsl::rfc003_swaps)
-            .values(&insertable)
-            .execute(&*connection)?;
+        self.do_in_transaction(|connection| {
+            diesel::insert_into(schema::rfc003_swaps::dsl::rfc003_swaps)
+                .values(&insertable)
+                .execute(&*connection)
+        })
+        .await?;
 
         Ok(())
     }
@@ -78,13 +80,16 @@ impl Retrieve for Sqlite {
     async fn get(&self, key: &SwapId) -> anyhow::Result<Swap> {
         use self::schema::rfc003_swaps::dsl::*;
 
-        let connection = self.connect().await;
-        let key = Text(key);
+        let record: QueryableSwap = self
+            .do_in_transaction(|connection| {
+                let key = Text(key);
 
-        let record: QueryableSwap = rfc003_swaps
-            .filter(swap_id.eq(key))
-            .first(&*connection)
-            .optional()?
+                rfc003_swaps
+                    .filter(swap_id.eq(key))
+                    .first(&*connection)
+                    .optional()
+            })
+            .await?
             .ok_or(Error::SwapNotFound)?;
 
         Ok(Swap::from(record))
@@ -93,13 +98,11 @@ impl Retrieve for Sqlite {
     async fn all(&self) -> anyhow::Result<Vec<Swap>> {
         use self::schema::rfc003_swaps::dsl::*;
 
-        let connection = self.connect().await;
+        let records: Vec<QueryableSwap> = self
+            .do_in_transaction(|connection| rfc003_swaps.load(&*connection))
+            .await?;
 
-        Ok(rfc003_swaps
-            .load(&*connection)?
-            .into_iter()
-            .map(|q: QueryableSwap| q.into())
-            .collect())
+        Ok(records.into_iter().map(|q| q.into()).collect())
     }
 }
 

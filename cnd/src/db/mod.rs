@@ -23,7 +23,6 @@ use crate::{
     db::custom_sql_types::Text,
     swap_protocols::{Role, SwapId},
 };
-use async_std::sync::MutexGuard;
 use diesel::{self, prelude::*, sqlite::SqliteConnection};
 use std::{path::Path, sync::Arc};
 
@@ -53,21 +52,33 @@ impl Sqlite {
         })
     }
 
-    async fn connect(&self) -> MutexGuard<'_, SqliteConnection> {
-        self.connection.lock().await
+    async fn do_in_transaction<F, T, E>(&self, f: F) -> Result<T, E>
+    where
+        F: Fn(&SqliteConnection) -> Result<T, E>,
+        E: From<diesel::result::Error>,
+    {
+        let guard = self.connection.lock().await;
+        let connection = &*guard;
+
+        let result = connection.transaction(|| f(&connection));
+
+        result
     }
 
     async fn role(&self, key: &SwapId) -> anyhow::Result<Role> {
         use self::schema::rfc003_swaps as swaps;
 
-        let connection = self.connect().await;
-        let key = Text(key);
+        let record: QueryableSwap = self
+            .do_in_transaction(|connection| {
+                let key = Text(key);
 
-        let record: QueryableSwap = swaps::table
-            .filter(swaps::swap_id.eq(key))
-            .select((swaps::swap_id, swaps::role))
-            .first(&*connection)
-            .optional()?
+                swaps::table
+                    .filter(swaps::swap_id.eq(key))
+                    .select((swaps::swap_id, swaps::role))
+                    .first(connection)
+                    .optional()
+            })
+            .await?
             .ok_or(Error::SwapNotFound)?;
 
         Ok(*record.role)

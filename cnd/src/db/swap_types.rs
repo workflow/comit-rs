@@ -1,5 +1,5 @@
 use crate::{
-    db::{custom_sql_types::Text, schema, Error, Sqlite},
+    db::{custom_sql_types::Text, schema, Sqlite},
     diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl},
     swap_protocols::{asset, ledger, Role, SwapId},
 };
@@ -82,17 +82,17 @@ macro_rules! impl_has_swap {
             async fn [<$table _has_swap>](&self, key: &SwapId) -> anyhow::Result<bool> {
                 use schema::$table as swaps;
 
-                let connection = self.connect().await;
-                let key = Text(key);
+                let record: Option<QueryableSwap> = self.do_in_transaction(|connection| {
+                    let key = Text(key);
+                    swaps::table
+                        .filter(swaps::swap_id.eq(key))
+                        .select((swaps::swap_id,)) // Select call needs argument to be a tuple.
+                        .first(&*connection)
+                        .optional()
+                })
+                .await?;
 
-                let record: Result<QueryableSwap, Error> = swaps::table
-                    .filter(swaps::swap_id.eq(key))
-                    .select((swaps::swap_id,)) // Select call needs argument to be a tuple.
-                    .first(&*connection)
-                    .optional()?
-                    .ok_or(Error::SwapNotFound);
-
-                Ok(record.is_ok())
+                Ok(record.is_some())
             }
         }
     };
