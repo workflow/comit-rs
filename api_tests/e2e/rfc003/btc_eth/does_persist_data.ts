@@ -9,6 +9,7 @@ setTimeout(function() {
             await alice.sendRequest();
             await bob.accept();
 
+            await alice.currentSwapIsAccepted();
             await alice.restart();
 
             await alice.assertHasCurrentSwap();

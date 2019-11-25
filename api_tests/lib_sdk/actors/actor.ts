@@ -10,6 +10,7 @@ import "../../lib/setup_chai";
 import { Asset, AssetKind } from "../asset";
 import { CndInstance } from "../cnd_instance";
 import { Ledger, LedgerKind } from "../ledger";
+import { sleep } from "../utils";
 import { Wallets } from "../wallets";
 import { Actors } from "./index";
 
@@ -184,6 +185,18 @@ export class Actor {
 
         this.logger.debug("Redeeming as part of swap @ %s", this.swap.self);
         await this.swap.redeem(Actor.defaultActionConfig);
+    }
+
+    public async currentSwapIsAccepted() {
+        let swapEntity;
+
+        do {
+            swapEntity = await this.swap.getEntity();
+
+            await sleep(200);
+        } while (
+            swapEntity.properties.state.communication.status !== "ACCEPTED"
+        );
     }
 
     public async assertHasCurrentSwap() {
