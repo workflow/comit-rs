@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Updated e2e tests (`refund` and `inverted_refund`) to new e2e test format.
 - Added persistent storage to cnd, now we save swaps to an Sqlite database when they are requested and accepted.
 
 ## [0.4.0] - 2019-11-26
