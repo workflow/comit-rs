@@ -3,10 +3,7 @@ pub mod ethereum;
 
 pub use self::{bitcoin::Bitcoin, ethereum::Ethereum};
 
-use crate::{
-    btsieve::{bitcoin::BitcoindConnector, ethereum::Web3Connector},
-    http_api::ledger::FromHttpLedger,
-};
+use crate::http_api::ledger::FromHttpLedger;
 use derivative::Derivative;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, hash::Hash};
@@ -52,11 +49,4 @@ pub enum LedgerKind {
     Bitcoin(Bitcoin),
     Ethereum(Ethereum),
     Unknown(String),
-}
-
-#[allow(missing_debug_implementations)]
-#[derive(Clone)]
-pub struct LedgerConnectors {
-    pub bitcoin_connector: BitcoindConnector,
-    pub ethereum_connector: Web3Connector,
 }
