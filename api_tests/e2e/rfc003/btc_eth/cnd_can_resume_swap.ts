@@ -15,19 +15,19 @@ setTimeout(function() {
             await bob.currentSwapIsAccepted();
 
             await alice.fund();
-            await alice.restart();
 
+            // This does not fully test the fact that we can get a transaction
+            // that happend in a block we missed.  To test this suggest:
+
+            // stop alice's node here
             await bob.fund();
-            await bob.restart();
+            // re-tart alice's node again here
 
             await alice.restart();
             await bob.restart();
 
             await alice.redeem();
-            await alice.restart();
-
             await bob.redeem();
-            await bob.restart();
 
             await alice.assertSwapped();
             await bob.assertSwapped();

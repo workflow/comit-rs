@@ -71,3 +71,9 @@ pub fn data_dir() -> Option<PathBuf> {
 pub trait CreateLedgerEvents<L: Ledger, A: Asset> {
     fn create_ledger_events(&self) -> Box<dyn LedgerEvents<L, A>>;
 }
+
+const MARGIN: i64 = 15 * 60; // 15 minutes, same as the TCP default timeout.
+
+pub fn block_is_younger_than_timestamp(block_time: i64, timestamp: i64) -> bool {
+    return block_time > (timestamp - MARGIN);
+}

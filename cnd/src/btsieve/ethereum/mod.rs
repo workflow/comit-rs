@@ -159,8 +159,10 @@ where
                         Some(parent_blockhash) => {
                             match connector.block_by_hash(parent_blockhash).compat().await {
                                 Ok(Some(block)) => {
-                                    let younger_than_timestamp = timestamp <= block.timestamp;
-                                    if younger_than_timestamp {
+                                    if crate::block_is_younger_than_timestamp(
+                                        block.timestamp.as_u32() as i64,
+                                        timestamp.as_u32() as i64,
+                                    ) {
                                         join(
                                             block_queue.send(block.clone()),
                                             look_in_the_past_queue.send(block.parent_hash),

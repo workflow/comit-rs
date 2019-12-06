@@ -96,7 +96,10 @@ where
         missing_block_futures = new_missing_block_futures;
 
         if let Some(block) = oldest_block.as_ref() {
-            if block.header.time as i64 >= timestamp.timestamp() {
+            if crate::block_is_younger_than_timestamp(
+                block.header.time as i64,
+                timestamp.timestamp(),
+            ) {
                 match blockchain_connector
                     .block_by_hash(block.header.prev_blockhash)
                     .compat()
