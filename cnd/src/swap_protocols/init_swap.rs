@@ -1,4 +1,5 @@
 use crate::{
+    db::AcceptedSwap,
     seed::SwapSeed,
     swap_protocols::{
         asset::Asset,
@@ -6,7 +7,7 @@ use crate::{
             alice, bob,
             state_machine::{self, SwapStates},
             state_store::StateStore,
-            Accept, Ledger, Request,
+            Ledger,
         },
         Role, SwapId,
     },
@@ -18,8 +19,7 @@ use tokio::executor::Executor;
 #[allow(clippy::cognitive_complexity)]
 pub fn init_accepted_swap<D, AL: Ledger, BL: Ledger, AA: Asset, BA: Asset>(
     dependencies: &D,
-    request: Request<AL, BL, AA, BA>,
-    accept: Accept<AL, BL>,
+    accepted: AcceptedSwap<AL, BL, AA, BA>,
     role: Role,
 ) -> anyhow::Result<()>
 where
@@ -30,6 +30,7 @@ where
         + CreateLedgerEvents<AL, AA>
         + CreateLedgerEvents<BL, BA>,
 {
+    let (request, accept, at) = accepted;
     let id = request.swap_id;
     let seed = SwapSeed::swap_seed(dependencies, id);
 
@@ -46,7 +47,7 @@ where
 
     let alpha = dependencies.create_ledger_events();
     let beta = dependencies.create_ledger_events();
-    let (swap_execution, receiver) = state_machine::create_swap(alpha, beta, request, accept);
+    let (swap_execution, receiver) = state_machine::create_swap(alpha, beta, request, accept, at);
 
     spawn(dependencies, id, swap_execution, receiver, role)
 }

@@ -1,5 +1,6 @@
 use crate::{
-    db::{DetermineTypes, Save, Saver},
+    db::{DetermineTypes, LoadAcceptedSwap, Save, Saver},
+    ethereum::{Erc20Token, EtherQuantity},
     http_api::{
         action::{
             ActionExecutionParameters, ActionResponseBody, IntoResponsePayload, ListRequiredFields,
@@ -14,6 +15,7 @@ use crate::{
     swap_protocols::{
         self,
         actions::Actions,
+        ledger::{Bitcoin, Ethereum},
         rfc003::{
             self,
             actions::{Action, ActionKind},
@@ -39,6 +41,10 @@ pub async fn handle_action<
         + DetermineTypes
         + LedgerEventsCreator
         + Executor
+        + LoadAcceptedSwap<Bitcoin, Ethereum, bitcoin::Amount, EtherQuantity>
+        + LoadAcceptedSwap<Ethereum, Bitcoin, EtherQuantity, bitcoin::Amount>
+        + LoadAcceptedSwap<Bitcoin, Ethereum, bitcoin::Amount, Erc20Token>
+        + LoadAcceptedSwap<Ethereum, Bitcoin, Erc20Token, bitcoin::Amount>
         + Clone,
 >(
     method: http::Method,
@@ -84,13 +90,10 @@ pub async fn handle_action<
                     )
                 })?;
 
-                let swap_request = state.request();
-                swap_protocols::init_accepted_swap(
-                    &dependencies,
-                    swap_request,
-                    accept_message,
-                    types.role,
-                )?;
+                let accepted =
+                    LoadAcceptedSwap::<AL, BL, AA, BA>::load_accepted_swap(&dependencies, &swap_id)
+                        .await?;
+                swap_protocols::init_accepted_swap(&dependencies, accepted, types.role)?;
 
                 Ok(ActionResponseBody::None)
             }

@@ -9,6 +9,7 @@ use crate::swap_protocols::{
         Ledger,
     },
 };
+use chrono::NaiveDateTime;
 
 // This is an adaptor struct that exists because our current state
 // machine implementation requires that we return &mut Futures. This
@@ -35,20 +36,26 @@ impl<L: Ledger, A: Asset> LedgerEventFutures<L, A> {
 }
 
 impl<L: Ledger, A: Asset> LedgerEvents<L, A> for LedgerEventFutures<L, A> {
-    fn htlc_deployed(&mut self, htlc_params: HtlcParams<L, A>) -> &mut DeployedFuture<L> {
+    fn htlc_deployed(
+        &mut self,
+        htlc_params: HtlcParams<L, A>,
+        timestamp: NaiveDateTime,
+    ) -> &mut DeployedFuture<L> {
         let htlc_events = &self.htlc_events;
         self.htlc_deployed
-            .get_or_insert_with(move || htlc_events.htlc_deployed(htlc_params))
+            .get_or_insert_with(move || htlc_events.htlc_deployed(htlc_params, timestamp))
     }
 
     fn htlc_funded(
         &mut self,
         htlc_params: HtlcParams<L, A>,
         htlc_location: &Deployed<L>,
+        timestamp: NaiveDateTime,
     ) -> &mut FundedFuture<L, A> {
         let htlc_events = &self.htlc_events;
-        self.htlc_funded
-            .get_or_insert_with(move || htlc_events.htlc_funded(htlc_params, htlc_location))
+        self.htlc_funded.get_or_insert_with(move || {
+            htlc_events.htlc_funded(htlc_params, htlc_location, timestamp)
+        })
     }
 
     fn htlc_redeemed_or_refunded(
@@ -56,10 +63,16 @@ impl<L: Ledger, A: Asset> LedgerEvents<L, A> for LedgerEventFutures<L, A> {
         htlc_params: HtlcParams<L, A>,
         htlc_deployment: &Deployed<L>,
         htlc_funding: &Funded<L, A>,
+        timestamp: NaiveDateTime,
     ) -> &mut RedeemedOrRefundedFuture<L> {
         let htlc_events = &self.htlc_events;
         self.htlc_redeemed_or_refunded.get_or_insert_with(move || {
-            htlc_events.htlc_redeemed_or_refunded(htlc_params, htlc_deployment, htlc_funding)
+            htlc_events.htlc_redeemed_or_refunded(
+                htlc_params,
+                htlc_deployment,
+                htlc_funding,
+                timestamp,
+            )
         })
     }
 }

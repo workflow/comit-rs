@@ -5,12 +5,14 @@ use anyhow::Context;
 use cnd::{
     btsieve::{bitcoin::BitcoindConnector, ethereum::Web3Connector},
     config::{self, Settings},
-    db::{DetermineTypes, Retrieve, Saver, Sqlite},
+    db::{DetermineTypes, LoadAcceptedSwap, Retrieve, Saver, Sqlite},
+    ethereum::{Erc20Token, EtherQuantity},
     http_api::route_factory,
     load_swaps,
     network::{self, transport, Network, SendRequest},
     seed::{Seed, SwapSeed},
     swap_protocols::{
+        ledger::{Bitcoin, Ethereum},
         rfc003::state_store::{InMemoryStateStore, StateStore},
         Facade, LedgerEventsCreator,
     },
@@ -130,6 +132,10 @@ fn spawn_warp_instance<
         + SwapSeed
         + DetermineTypes
         + Retrieve
+        + LoadAcceptedSwap<Bitcoin, Ethereum, bitcoin::Amount, EtherQuantity>
+        + LoadAcceptedSwap<Ethereum, Bitcoin, EtherQuantity, bitcoin::Amount>
+        + LoadAcceptedSwap<Bitcoin, Ethereum, bitcoin::Amount, Erc20Token>
+        + LoadAcceptedSwap<Ethereum, Bitcoin, Erc20Token, bitcoin::Amount>
         + LedgerEventsCreator
         + Saver,
 >(

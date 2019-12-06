@@ -14,6 +14,7 @@ use bitcoin::{
     hashes::sha256d,
     BitcoinHash,
 };
+use chrono::NaiveDateTime;
 use futures_core::{compat::Future01CompatExt, TryFutureExt};
 use reqwest::{r#async::Client, Url};
 use std::{collections::HashSet, fmt::Debug, ops::Add};
@@ -34,7 +35,7 @@ where
     fn matching_transactions(
         &self,
         pattern: TransactionPattern,
-        timestamp: Option<u32>,
+        timestamp: NaiveDateTime,
     ) -> Box<dyn Stream<Item = Self::Transaction, Error = ()> + Send + 'static> {
         let matching_transaction =
             Box::pin(matching_transaction(self.clone(), pattern, timestamp)).compat();
@@ -45,7 +46,7 @@ where
 async fn matching_transaction<C, E>(
     mut blockchain_connector: C,
     pattern: TransactionPattern,
-    reference_timestamp: Option<u32>,
+    timestamp: NaiveDateTime,
 ) -> Result<bitcoin::Transaction, ()>
 where
     C: LatestBlock<Block = bitcoin::Block, Error = E>
@@ -94,10 +95,8 @@ where
         }
         missing_block_futures = new_missing_block_futures;
 
-        if let (Some(block), Some(reference_timestamp)) =
-            (oldest_block.as_ref(), reference_timestamp)
-        {
-            if block.header.time >= reference_timestamp {
+        if let Some(block) = oldest_block.as_ref() {
+            if block.header.time as i64 >= timestamp.timestamp() {
                 match blockchain_connector
                     .block_by_hash(block.header.prev_blockhash)
                     .compat()

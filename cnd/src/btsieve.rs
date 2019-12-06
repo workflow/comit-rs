@@ -4,6 +4,7 @@
 pub mod bitcoin;
 pub mod ethereum;
 
+use chrono::NaiveDateTime;
 use tokio::prelude::{Future, Stream};
 
 pub trait MatchingTransactions<P>: Send + Sync + 'static {
@@ -12,7 +13,7 @@ pub trait MatchingTransactions<P>: Send + Sync + 'static {
     fn matching_transactions(
         &self,
         pattern: P,
-        timestamp: Option<u32>,
+        timestamp: NaiveDateTime,
     ) -> Box<dyn Stream<Item = Self::Transaction, Error = ()> + Send>;
 }
 

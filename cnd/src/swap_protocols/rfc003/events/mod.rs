@@ -10,6 +10,7 @@ use crate::swap_protocols::{
     asset::Asset,
     rfc003::{self, ledger::Ledger, state_machine::HtlcParams, Secret},
 };
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use tokio::{self, prelude::future::Either};
 
@@ -52,12 +53,17 @@ pub type FundedFuture<L: Ledger, A: Asset> = Future<Funded<L, A>>;
 pub type RedeemedOrRefundedFuture<L: Ledger> = Future<Either<Redeemed<L>, Refunded<L>>>;
 
 pub trait LedgerEvents<L: Ledger, A: Asset>: Send {
-    fn htlc_deployed(&mut self, htlc_params: HtlcParams<L, A>) -> &mut DeployedFuture<L>;
+    fn htlc_deployed(
+        &mut self,
+        htlc_params: HtlcParams<L, A>,
+        timestamp: NaiveDateTime,
+    ) -> &mut DeployedFuture<L>;
 
     fn htlc_funded(
         &mut self,
         htlc_params: HtlcParams<L, A>,
         htlc_deployment: &Deployed<L>,
+        timestamp: NaiveDateTime,
     ) -> &mut FundedFuture<L, A>;
 
     fn htlc_redeemed_or_refunded(
@@ -65,20 +71,27 @@ pub trait LedgerEvents<L: Ledger, A: Asset>: Send {
         htlc_params: HtlcParams<L, A>,
         htlc_deployment: &Deployed<L>,
         htlc_funding: &Funded<L, A>,
+        timestamp: NaiveDateTime,
     ) -> &mut RedeemedOrRefundedFuture<L>;
 }
 
 pub trait HtlcEvents<L: Ledger, A: Asset>: Send + Sync + 'static {
-    fn htlc_deployed(&self, htlc_params: HtlcParams<L, A>) -> Box<DeployedFuture<L>>;
+    fn htlc_deployed(
+        &self,
+        htlc_params: HtlcParams<L, A>,
+        timestamp: NaiveDateTime,
+    ) -> Box<DeployedFuture<L>>;
     fn htlc_funded(
         &self,
         htlc_params: HtlcParams<L, A>,
         htlc_deployment: &Deployed<L>,
+        timestamp: NaiveDateTime,
     ) -> Box<FundedFuture<L, A>>;
     fn htlc_redeemed_or_refunded(
         &self,
         htlc_params: HtlcParams<L, A>,
         htlc_deployment: &Deployed<L>,
         htlc_funding: &Funded<L, A>,
+        timestamp: NaiveDateTime,
     ) -> Box<RedeemedOrRefundedFuture<L>>;
 }

@@ -22,6 +22,7 @@ use crate::{
         },
     },
 };
+use chrono::NaiveDateTime;
 use futures::{
     future::{self, Either},
     Future, Stream,
@@ -40,6 +41,7 @@ impl HtlcEvents<Ethereum, EtherQuantity> for Web3Connector {
     fn htlc_deployed(
         &self,
         htlc_params: HtlcParams<Ethereum, EtherQuantity>,
+        timestamp: NaiveDateTime,
     ) -> Box<DeployedFuture<Ethereum>> {
         let future = self
             .matching_transactions(
@@ -51,7 +53,7 @@ impl HtlcEvents<Ethereum, EtherQuantity> for Web3Connector {
                     transaction_data_length: None,
                     events: None,
                 },
-                None,
+                timestamp,
             )
             .map_err(|_| rfc003::Error::Btsieve)
             .first_or_else(|| {
@@ -70,6 +72,7 @@ impl HtlcEvents<Ethereum, EtherQuantity> for Web3Connector {
         &self,
         _htlc_params: HtlcParams<Ethereum, EtherQuantity>,
         deploy_transaction: &Deployed<Ethereum>,
+        _timestamp: NaiveDateTime,
     ) -> Box<FundedFuture<Ethereum, EtherQuantity>> {
         Box::new(future::ok(Funded {
             transaction: deploy_transaction.transaction.clone(),
@@ -82,8 +85,15 @@ impl HtlcEvents<Ethereum, EtherQuantity> for Web3Connector {
         htlc_params: HtlcParams<Ethereum, EtherQuantity>,
         htlc_deployment: &Deployed<Ethereum>,
         htlc_funding: &Funded<Ethereum, EtherQuantity>,
+        timestamp: NaiveDateTime,
     ) -> Box<RedeemedOrRefundedFuture<Ethereum>> {
-        htlc_redeemed_or_refunded(self.clone(), htlc_params, htlc_deployment, htlc_funding)
+        htlc_redeemed_or_refunded(
+            self.clone(),
+            htlc_params,
+            htlc_deployment,
+            htlc_funding,
+            timestamp,
+        )
     }
 }
 
@@ -96,6 +106,7 @@ fn htlc_redeemed_or_refunded<A: Asset>(
     _htlc_params: HtlcParams<Ethereum, A>,
     htlc_deployment: &Deployed<Ethereum>,
     _: &Funded<Ethereum, A>,
+    timestamp: NaiveDateTime,
 ) -> Box<RedeemedOrRefundedFuture<Ethereum>> {
     let refunded_future = {
         ethereum_connector
@@ -112,7 +123,7 @@ fn htlc_redeemed_or_refunded<A: Asset>(
                         topics: vec![Some(Topic(*REFUND_LOG_MSG))],
                     }]),
                 },
-                None,
+                timestamp,
             )
             .map_err(|_| rfc003::Error::Btsieve)
             .first_or_else(|| {
@@ -136,7 +147,7 @@ fn htlc_redeemed_or_refunded<A: Asset>(
                 data: None,
                 topics: vec![Some(Topic(*REDEEM_LOG_MSG))],
             }])
-        }, None)
+        }, timestamp)
             .map_err(|_| rfc003::Error::Btsieve)
             .first_or_else(|| {
                 log::warn!("stream of matching transactions ended before yielding a value");
@@ -184,6 +195,7 @@ mod erc20 {
         fn htlc_deployed(
             &self,
             htlc_params: HtlcParams<Ethereum, Erc20Token>,
+            timestamp: NaiveDateTime,
         ) -> Box<DeployedFuture<Ethereum>> {
             let future = self
                 .matching_transactions(
@@ -195,7 +207,7 @@ mod erc20 {
                         transaction_data_length: None,
                         events: None,
                     },
-                    None,
+                    timestamp,
                 )
                 .map_err(|_| rfc003::Error::Btsieve)
                 .first_or_else(|| {
@@ -216,6 +228,7 @@ mod erc20 {
             &self,
             htlc_params: HtlcParams<Ethereum, Erc20Token>,
             htlc_deployment: &Deployed<Ethereum>,
+            timestamp: NaiveDateTime,
         ) -> Box<FundedFuture<Ethereum, Erc20Token>> {
             let future = self
                 .matching_transactions(
@@ -235,7 +248,7 @@ mod erc20 {
                             ],
                         }]),
                     },
-                    None,
+                    timestamp,
                 )
                 .map_err(|_| rfc003::Error::Btsieve)
                 .first_or_else(|| {
@@ -276,8 +289,15 @@ mod erc20 {
             htlc_params: HtlcParams<Ethereum, Erc20Token>,
             htlc_deployment: &Deployed<Ethereum>,
             htlc_funding: &Funded<Ethereum, Erc20Token>,
+            timestamp: NaiveDateTime,
         ) -> Box<RedeemedOrRefundedFuture<Ethereum>> {
-            htlc_redeemed_or_refunded(self.clone(), htlc_params, htlc_deployment, htlc_funding)
+            htlc_redeemed_or_refunded(
+                self.clone(),
+                htlc_params,
+                htlc_deployment,
+                htlc_funding,
+                timestamp,
+            )
         }
     }
 }
